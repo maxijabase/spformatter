@@ -1,0 +1,4 @@
+void test()
+{
+    value = data[client - 1];
+}

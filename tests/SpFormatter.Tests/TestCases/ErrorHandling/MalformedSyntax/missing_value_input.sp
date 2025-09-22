@@ -1,0 +1,4 @@
+void TestMissingValue()
+{
+    int x = ;
+}

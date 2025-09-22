@@ -1,0 +1,4 @@
+int GetValue()
+{
+    return value;
+}

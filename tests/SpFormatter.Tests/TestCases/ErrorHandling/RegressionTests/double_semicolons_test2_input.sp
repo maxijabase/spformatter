@@ -1,0 +1,1 @@
+void test() { Handle g_var = INVALID_HANDLE; }

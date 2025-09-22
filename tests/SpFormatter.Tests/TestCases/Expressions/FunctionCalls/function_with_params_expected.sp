@@ -1,0 +1,4 @@
+void test()
+{
+    func(a, b, c);
+}

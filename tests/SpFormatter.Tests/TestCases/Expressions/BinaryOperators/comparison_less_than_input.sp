@@ -1,0 +1,1 @@
+void test() { if(x<y) {} }

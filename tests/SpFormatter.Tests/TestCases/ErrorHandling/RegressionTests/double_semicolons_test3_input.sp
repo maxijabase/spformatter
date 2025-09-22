@@ -1,0 +1,1 @@
+void test() { native bool IsValid(int client); }

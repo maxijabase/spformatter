@@ -1,0 +1,1 @@
+void test() { value = matrix [ i ] [ j ]; }

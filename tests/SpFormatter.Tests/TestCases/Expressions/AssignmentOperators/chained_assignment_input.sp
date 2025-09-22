@@ -1,0 +1,1 @@
+void test() { a=b=c=0; }

@@ -1,0 +1,1 @@
+stock bool IsValidClient(int client) {}

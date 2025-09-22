@@ -1,0 +1,1 @@
+native PrintToServer(const char[] format, any ...);

@@ -1,0 +1,1 @@
+native bool IsValidClient( int client );

@@ -1,0 +1,3 @@
+void DoNothing() {
+    return;
+}

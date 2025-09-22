@@ -1,0 +1,4 @@
+void test()
+{
+    GetClientOfUserId(GetEventInt(event, "userid"));
+}

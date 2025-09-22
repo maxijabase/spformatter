@@ -1,0 +1,6 @@
+void TestControlStructure()
+{
+    if(condition)
+    {
+    }
+}

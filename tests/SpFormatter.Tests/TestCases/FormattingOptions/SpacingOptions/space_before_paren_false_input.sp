@@ -1,0 +1,1 @@
+void test() { PrintToChat (client, message); }

@@ -1,0 +1,1 @@
+void test() { x = a + b * c; }
