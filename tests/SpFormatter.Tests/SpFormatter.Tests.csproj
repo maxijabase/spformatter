@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SpFormatter\SpFormatter.csproj" />
+    <ProjectReference Include="..\..\src\SpFormatter.Cli\SpFormatter.Cli.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
