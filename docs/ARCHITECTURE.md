@@ -6,21 +6,19 @@ Valid SourcePawn source in, consistently formatted SourcePawn out.
 
 Parse and print are separate. Invalid input should fail closed (report errors), not silently recover, unless Recovery is explicitly enabled later.
 
-## Current shape (legacy)
+## Current shape
 
 ```
-source -> SourcePawnParser (Tree-sitter) -> SourcePawnFormatter (god class) -> text
+source -> SourcePawnParser -> SourcePawnFormatter facade
+                              -> AstPrinter (migrated expressions)
+                              -> legacy FormatX methods (everything else)
+                              -> LayoutRules for shared spacing/indent
 ```
 
-Almost all behavior lives in `src/SpFormatter/SourcePawnFormatter.cs`:
+`FormatWithResult` returns `FormatResult`. `Format` throws on failure for CLI/UI compatibility.
 
-- typed `FormatX` methods for some node types
-- ERROR-node fallbacks and expression wrapping
-- regex / string surgery for spacing
-- top-level include/def reordering
-- brace injection for bare `if` bodies
+Legacy recovery for broken trees still runs inside `FormatWithResult` until a gated Recovery module exists.
 
-That mix is why small fixes break unrelated goldens.
 
 ## Target shape
 

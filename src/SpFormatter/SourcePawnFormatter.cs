@@ -9,75 +9,85 @@ public class SourcePawnFormatter : IDisposable
 {
     private readonly SourcePawnParser _parser;
     private readonly FormattingOptions _options;
+    private readonly LayoutRules _layout;
+    private readonly AstPrinter _astPrinter;
     private bool _disposed;
 
     public SourcePawnFormatter(FormattingOptions? options = null)
     {
         _parser = new SourcePawnParser();
         _options = options ?? FormattingOptions.Default;
+        _layout = new LayoutRules(_options);
+        _astPrinter = new AstPrinter(_layout, (node, indent) => FormatNode(node, indent));
     }
 
     public string Format(string sourceCode)
+    {
+        var result = FormatWithResult(sourceCode);
+        if (!result.Success)
+        {
+            var errorDetails = string.Join(
+                _options.LineEnding + _options.LineEnding,
+                result.Errors.Select(e => e.GetDetailedDescription()));
+            throw new FormatException(
+                $"Source code contains syntax errors:{_options.LineEnding}{_options.LineEnding}{errorDetails}");
+        }
+
+        return result.Text;
+    }
+
+    /// <summary>
+    /// Formats source and returns a structured result. Prefer this when callers want errors without exceptions.
+    /// Legacy recovery for broken trees still runs inside this path until Recovery is split out.
+    /// </summary>
+    public FormatResult FormatWithResult(string sourceCode)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(SourcePawnFormatter));
 
         using var tree = _parser.ParseSource(sourceCode);
         if (tree?.RootNode == null)
-        {
-            throw new FormatException("Unable to parse source code");
-        }
+            return FormatResult.Fail("Unable to parse source code");
 
         if (tree.RootNode.HasError)
         {
-            // First try to format the malformed parse tree - this handles misidentified function calls/control structures
             try
             {
                 var malformedResult = FormatNode(tree.RootNode, 0, sourceCode);
-                
-                
+
                 if (!string.IsNullOrEmpty(malformedResult))
                 {
-                    // Apply expression-only semicolon removal logic here too
                     var isMalformedExpressionOnly = IsExpressionOnlyFormatting(tree.RootNode, sourceCode);
-                    
+
                     if (isMalformedExpressionOnly && !sourceCode.TrimEnd().EndsWith(";") && malformedResult.TrimEnd().EndsWith(";"))
                     {
                         malformedResult = malformedResult.TrimEnd().TrimEnd(';');
                     }
-                    
-                    return malformedResult;
+
+                    return FormatResult.Ok(malformedResult);
                 }
             }
             catch
             {
-                // If formatting the malformed tree fails, continue to expression wrapping
+                // Fall through to expression wrapping, then fail.
             }
-            
-            // Try to format as expression fragment by wrapping it
+
             var expressionResult = TryFormatAsExpression(sourceCode);
             if (expressionResult != null)
-            {
-                return expressionResult;
-            }
+                return FormatResult.Ok(expressionResult);
 
-            var errors = _parser.GetSyntaxErrors(sourceCode);
-            var errorDetails = string.Join(_options.LineEnding + _options.LineEnding, errors.Select(e => e.GetDetailedDescription()));
-            throw new FormatException($"Source code contains syntax errors:{_options.LineEnding}{_options.LineEnding}{errorDetails}");
+            return FormatResult.Fail(_parser.GetSyntaxErrors(sourceCode));
         }
 
-        // For expression-only formatting, check if this is a simple expression without semicolons
         var isExpressionOnly = IsExpressionOnlyFormatting(tree.RootNode, sourceCode);
+        var text = FormatNode(tree.RootNode, 0, sourceCode);
 
-        var result = FormatNode(tree.RootNode, 0, sourceCode);
-        
-        // If this is expression-only formatting and the original had no semicolon, don't add one
-        if (isExpressionOnly && !sourceCode.TrimEnd().EndsWith(";") && result.TrimEnd().EndsWith(";"))
+        if (isExpressionOnly && !sourceCode.TrimEnd().EndsWith(";") && text.TrimEnd().EndsWith(";"))
         {
-            result = result.TrimEnd().TrimEnd(';');
+            text = text.TrimEnd().TrimEnd(';');
         }
-        
-        return result;
+
+        return FormatResult.Ok(text);
     }
 
     private bool IsExpressionOnlyFormatting(Node rootNode, string sourceCode)
@@ -120,6 +130,9 @@ public class SourcePawnFormatter : IDisposable
 
     private string FormatNode(Node node, int indentLevel, string? originalSource = null)
     {
+        if (_astPrinter.TryPrint(node, indentLevel, out var printed))
+            return printed;
+
         var currentIndent = GetIndent(indentLevel);
         
         // Debug mode disabled
@@ -140,9 +153,6 @@ public class SourcePawnFormatter : IDisposable
             
             case "expression_statement":
                 return FormatExpressionStatement(node, indentLevel);
-            
-            case "call_expression":
-                return FormatCallExpression(node);
             
             case "condition_statement":
                 return FormatConditionStatement(node, indentLevel);
@@ -168,26 +178,9 @@ public class SourcePawnFormatter : IDisposable
             case "variable_declaration_statement":
                 return FormatVariableDeclaration(node, indentLevel);
             
-            case "assignment_expression":
-            case "assignment_statement":
-                return FormatAssignmentStatement(node, indentLevel);
-            
-            case "update_expression":
-                return FormatUpdateExpression(node);
-            
-            case "binary_expression":
-                return FormatBinaryExpression(node);
-            
-            case "unary_expression":
-                return FormatUnaryExpression(node);
-            
             case "break_statement":
             case "continue_statement":
                 return FormatBreakContinueStatement(node, indentLevel);
-            
-            case "ternary_expression":
-            case "conditional_expression":
-                return FormatTernaryExpression(node);
             
             case "array_access":
             case "array_indexed_access":
@@ -220,18 +213,8 @@ public class SourcePawnFormatter : IDisposable
             case "call_arguments":
                 return FormatCallArguments(node);
             
-            case "string_literal":
-            case "character_literal":
-            case "number_literal":
-            case "identifier":
-            case "builtin_type":
-                return node.Text;
-            
             case "type":
                 return FormatType(node);
-            
-            case "visibility":
-                return node.Text;
             
             // Punctuation - return as-is
             case "(":
@@ -240,11 +223,7 @@ public class SourcePawnFormatter : IDisposable
             case "}":
             case ";":
             case ",":
-                return node.Text;
-            
             case ":":
-                return node.Text;
-            
             case "?":
                 return node.Text;
             
@@ -729,35 +708,6 @@ public class SourcePawnFormatter : IDisposable
         }
     }
     
-    private string FormatCallExpression(Node node)
-    {
-        var parts = new List<string>();
-
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                parts.Add(formatted);
-            }
-        }
-
-        // Handle SpaceBeforeOpenParen for function calls
-        if (parts.Count >= 2 && parts[1].StartsWith("("))
-        {
-            if (_options.SpaceBeforeOpenParen)
-            {
-                return parts[0] + " " + string.Join("", parts.Skip(1));
-            }
-            else
-            {
-                return string.Join("", parts);
-            }
-        }
-
-        return string.Join("", parts);
-    }
-    
     private string FormatConditionStatement(Node node, int indentLevel)
     {
         var currentIndent = GetIndent(indentLevel);
@@ -1166,132 +1116,15 @@ public class SourcePawnFormatter : IDisposable
         return string.Join("", parts);
     }
     
-    private string FormatAssignmentStatement(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                if (child.Type == "=" || child.Type == "+=" || child.Type == "-=" || child.Type == "*=" || child.Type == "/=" || child.Type == "%=")
-                {
-                    if (_options.SpaceAroundOperators)
-                    {
-                        parts.Add(" " + formatted + " ");
-                    }
-                    else
-                    {
-                        parts.Add(formatted);
-                    }
-                }
-                else
-                {
-                    parts.Add(formatted);
-                }
-            }
-        }
-        
-        var result = currentIndent + string.Join("", parts);
-        if (_options.RequireSemicolons && !result.TrimEnd().EndsWith(";"))
-        {
-            result += ";";
-        }
-
-        return result;
-    }
-    
-    private string FormatBinaryExpression(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                // Check if this is an operator
-                if (IsOperator(child.Type))
-                {
-                    if (_options.SpaceAroundOperators)
-                    {
-                        parts.Add(" " + formatted + " ");
-                    }
-                    else
-                    {
-                        parts.Add(formatted);
-                    }
-                }
-                else
-                {
-                    parts.Add(formatted);
-                }
-            }
-        }
-        
-        return string.Join("", parts);
-    }
-    
-    private string FormatUnaryExpression(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                parts.Add(formatted);
-            }
-        }
-        
-        // Unary expressions should not have spaces between operator and operand
-        // Examples: !condition, ++var, --var, -value, +value
-        return string.Join("", parts);
-    }
-    
     private string FormatBreakContinueStatement(Node node, int indentLevel)
     {
         var currentIndent = GetIndent(indentLevel);
         return currentIndent + node.Text.Trim();
     }
     
-    private string FormatTernaryExpression(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                // Add spaces around ? and : operators for readability
-                if (child.Type == "?")
-                {
-                    parts.Add(" ? ");
-                }
-                else if (child.Type == ":")
-                {
-                    parts.Add(" : ");
-                }
-                else
-                {
-                    parts.Add(formatted);
-                }
-            }
-        }
-        
-        return string.Join("", parts);
-    }
-    
     private bool IsOperator(string nodeType)
     {
-        return nodeType is "+" or "-" or "*" or "/" or "%" or 
-               "==" or "!=" or "<" or ">" or "<=" or ">=" or 
-               "&&" or "||" or "&" or "|" or "^" or "<<" or ">>" or
-               "=" or "+=" or "-=" or "*=" or "/=" or "%=";
+        return _layout.IsBinaryOrAssignmentOperator(nodeType);
     }
     
     private string FormatArrayAccess(Node node)
@@ -1728,23 +1561,9 @@ public class SourcePawnFormatter : IDisposable
         return string.Join(_options.LineEnding, result);
     }
     
-    private string FormatUpdateExpression(Node node)
-    {
-        // Handle ++i, i++, --i, i-- with proper spacing (no space)
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            parts.Add(FormatNode(child, 0));
-        }
-        
-        // Join without spaces for tight operator binding
-        return string.Join("", parts);
-    }
-
     private string GetIndent(int level)
     {
-        return string.Concat(Enumerable.Repeat(_options.IndentString, level));
+        return _layout.Indent(level);
     }
     
     private bool ShouldUseCompactFormatting(Node node, string? originalSource = null)
