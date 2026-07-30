@@ -1,0 +1,15 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/SpFormatter.Cli/SpFormatter.Cli.csproj" />
+    <Project Path="src/SpFormatter.UI/SpFormatter.UI.csproj" />
+    <Project Path="src/SpFormatter/SpFormatter.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SpFormatter.Tests/SpFormatter.Tests.csproj" />
+  </Folder>
+</Solution>
