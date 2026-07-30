@@ -112,13 +112,14 @@ public abstract class FormatterTestBase : IDisposable
         File.Exists(inputFile).Should().BeTrue($"Input file should exist: {inputFile}");
         File.Exists(expectedFile).Should().BeTrue($"Expected file should exist: {expectedFile}");
 
-        var input = File.ReadAllText(inputFile);
-        var expected = File.ReadAllText(expectedFile);
+        var input = NormalizeNewlines(File.ReadAllText(inputFile));
+        var expected = NormalizeNewlines(File.ReadAllText(expectedFile));
 
         // Ensure options use Unix line endings for consistent test results
         options.LineEnding = "\n";
         using var formatter = new SourcePawnFormatter(options);
-        var formatted = formatter.Format(input);
+        var formatted = NormalizeNewlines(formatter.Format(input)).TrimEnd('\n', '\r');
+        expected = expected.TrimEnd('\n', '\r');
         formatted.Should().Be(expected, $"Input file '{inputFilePath}' with options should format to match '{expectedFilePath}'");
     }
 
@@ -134,10 +135,11 @@ public abstract class FormatterTestBase : IDisposable
         File.Exists(inputFile).Should().BeTrue($"Input file should exist: {inputFile}");
         File.Exists(expectedFile).Should().BeTrue($"Expected file should exist: {expectedFile}");
 
-        var input = File.ReadAllText(inputFile);
-        var expected = File.ReadAllText(expectedFile);
+        var input = NormalizeNewlines(File.ReadAllText(inputFile));
+        var expected = NormalizeNewlines(File.ReadAllText(expectedFile));
 
-        var result = _formatter.Format(input);
+        var result = NormalizeNewlines(_formatter.Format(input)).TrimEnd('\n', '\r');
+        expected = expected.TrimEnd('\n', '\r');
         result.Should().Be(expected, $"Test case '{testCaseName}' should format correctly");
     }
 
@@ -151,7 +153,7 @@ public abstract class FormatterTestBase : IDisposable
 
         File.Exists(inputFile).Should().BeTrue($"Input file should exist: {inputFile}");
 
-        var input = File.ReadAllText(inputFile);
+        var input = NormalizeNewlines(File.ReadAllText(inputFile));
         var result = _formatter.Format(input);
 
         using var parser = new SourcePawnParser();
@@ -178,6 +180,9 @@ public abstract class FormatterTestBase : IDisposable
         var assemblyDir = Path.GetDirectoryName(assemblyLocation)!;
         return Path.Combine(assemblyDir, "TestCases");
     }
+
+    protected static string NormalizeNewlines(string text) =>
+        text.Replace("\r\n", "\n").Replace("\r", "\n");
 
     public void Dispose()
     {

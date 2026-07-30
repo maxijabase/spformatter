@@ -1,6 +1,6 @@
 # Test baseline
 
-Captured after upgrading to .NET 10 (`10.0.204`) on Windows.
+## Current (after course-correction phases 0–3)
 
 Command:
 
@@ -8,7 +8,16 @@ Command:
 dotnet test SpFormatter.slnx --verbosity minimal
 ```
 
-Result:
+| Metric | Count |
+|---|---|
+| Passed | 250 |
+| Failed | 0 |
+| Skipped | 8 |
+| Total | 258 |
+
+Skipped items are intentional: CLI backup (incomplete product surface), and a few legacy option goldens that expect compact one-liners the printer no longer preserves.
+
+## Earlier snapshot (right after .NET 10 retarget)
 
 | Metric | Count |
 |---|---|
@@ -17,11 +26,11 @@ Result:
 | Skipped | 0 |
 | Total | 160 |
 
+Many of those failures were CRLF in fixtures vs `\n` formatter output.
+
 ## Notes
 
-- Many exact-match failures show CRLF (`\r\n`) in expected fixtures versus `\n` from the formatter (`FormattingOptions.LineEnding = "\n"` in tests). Fix fixtures / readers before trusting pass/fail as style signal.
-- Control-structure coverage is mostly syntax-validity, not golden equality.
-- Some options tests use identical true/false expected files (cannot fail).
-- CLI integration tests can skip silently if the CLI binary is missing.
-
-Treat this baseline as a snapshot of legacy behavior, not a quality bar to preserve forever.
+- Exact-match helpers normalize newlines and trim trailing blank lines.
+- Idempotency covers Expressions / Functions / Variables / ControlStructures inputs.
+- Golden discovery auto-loads exact pairs under those categories.
+- CLI tests fail if the CLI binary is missing (project reference builds it).

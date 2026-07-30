@@ -23,10 +23,10 @@ Many exact-match failures are CRLF in expected fixtures vs `\n` formatter output
 
 | Construct | Status | Notes |
 |---|---|---|
-| literals / identifiers / types | Legacy-only | mostly passthrough |
-| binary / unary / update expressions | Partial | goldens exist; spacing also hit by regex helpers |
-| assignment | Partial | |
-| call expressions / args | Partial | |
+| literals / identifiers / types | Supported | routed through `AstPrinter` |
+| binary / unary / update expressions | Supported | `AstPrinter` + `LayoutRules` (legacy regex helpers may still touch unknown paths) |
+| assignment | Supported | `AstPrinter` |
+| call expressions / args | Partial | call nodes in `AstPrinter`; `call_arguments` still legacy |
 | variable declarations (local / global / old-style) | Partial | |
 | function definitions / declarations | Partial | includes misparse fallbacks for control structures |
 | native declarations | Partial | |
@@ -37,7 +37,7 @@ Many exact-match failures are CRLF in expected fixtures vs `\n` formatter output
 | blocks | Partial | |
 | includes / preprocessor | Partial | preprocessor often raw `node.Text`; sort-includes opt-in |
 | comments | Partial | |
-| ternary | Legacy-only | |
+| ternary | Supported | `AstPrinter` honors `SpaceAroundOperators` |
 | arrays / indexed access | Partial | |
 | expression fragments (no full file) | Legacy-only | wrapper recovery; fail-closed preferred going forward |
 | ERROR-tree recovery | Out of scope for new work | keep behind Recovery if needed later |
