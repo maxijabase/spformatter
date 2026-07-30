@@ -1,0 +1,28 @@
+---
+description: Guardrails when editing the SpFormatter library printer
+globs: src/SpFormatter/**/*.cs
+alwaysApply: false
+---
+
+# Printer edits
+
+You are in the formatting library.
+
+## Do
+
+- Add typed construct printers and shared `LayoutRules`
+- Fail closed on syntax errors in new paths
+- Preserve statement shape and top-level order unless an explicit option says otherwise
+- Keep spacing policy in one place
+- Update `docs/SUPPORTED.md` when construct status changes
+
+## Do not
+
+- Extend `AddSpacesAroundBinaryOperators` / similar regex helpers as the primary fix
+- Add more ERROR-node glue in `FormatSourceFile` / fallbacks
+- Add expression-wrapper recovery to new code paths
+- Brace-wrap bare `if` bodies by default
+- Reorder includes/functions by default
+- Leave debug `Console.WriteLine` in the printer
+
+If the change only works by formatting a broken parse tree, stop and classify the case before coding.

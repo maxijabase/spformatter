@@ -1,0 +1,26 @@
+---
+description: SpFormatter project guardrails for all agent work
+alwaysApply: true
+---
+
+# SpFormatter
+
+SourcePawn formatter (.NET 10, `SpFormatter.slnx`).
+
+Before changing behavior, read:
+
+- `AGENTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/STYLE.md`
+- `docs/SUPPORTED.md`
+- `docs/AI_WORKFLOW.md`
+
+## Hard rules
+
+- One construct or one printer layer per session. Do not try to green the whole suite.
+- Prefer new `AstPrinter` / `LayoutRules` / `FormatResult` paths over patches in the legacy god class.
+- No new regex or string post-processors on clean trees.
+- No new `HasError` special-cases without updating `docs/SUPPORTED.md`.
+- Do not invent options the engine does not honor.
+- Do not mass-update goldens to hide failures.
+- Commit logical chunks with lowercase subjects and short human bodies. No em-dashes, no filler language.

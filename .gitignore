@@ -427,6 +427,8 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-*.md
+# local AI tooling state; keep project rules and docs tracked
 .claude/
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
