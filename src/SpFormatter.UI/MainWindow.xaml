@@ -102,7 +102,7 @@
                                 </Grid>
                                 
                                 <CheckBox x:Name="UseSpacesCheckBox" Content="Use spaces (instead of tabs)" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="IndentPreprocessorCheckBox" Content="Indent preprocessor directives" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="IndentPreprocessorCheckBox" Content="Indent preprocessor (not implemented)" IsChecked="False" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                             </StackPanel>
                             
                             <!-- Spacing Options -->
@@ -112,7 +112,7 @@
                                 <CheckBox x:Name="SpaceAfterCommaCheckBox" Content="Space after comma" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                                 <CheckBox x:Name="SpaceAroundOperatorsCheckBox" Content="Space around operators" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                                 <CheckBox x:Name="SpaceBeforeOpenParenCheckBox" Content="Space before opening paren" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="SpaceAfterSemicolonCheckBox" Content="Space after semicolon" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="SpaceAfterSemicolonCheckBox" Content="Space after semicolon (not implemented)" IsChecked="True" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                                 <CheckBox x:Name="SpaceInArrayBracketsCheckBox" Content="Space in array brackets" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                             </StackPanel>
                             
@@ -121,8 +121,8 @@
                                 <TextBlock Text="Line Breaks" FontWeight="Bold" Margin="0,0,0,8"/>
                                 
                                 <CheckBox x:Name="NewLineAfterOpenBraceCheckBox" Content="New line after opening brace" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="NewLineBeforeCloseBraceCheckBox" Content="New line before closing brace" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="NewLineAfterSemicolonCheckBox" Content="New line after semicolon" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="NewLineBeforeCloseBraceCheckBox" Content="New line before closing brace (not implemented)" IsChecked="True" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="NewLineAfterSemicolonCheckBox" Content="New line after semicolon (not implemented)" IsChecked="True" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                                 <CheckBox x:Name="NewLineAfterIncludeCheckBox" Content="New line after include" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                                 
                                 <Grid Margin="0,8,0,0">
@@ -162,10 +162,10 @@
                             
                             <!-- Alignment Options -->
                             <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                                <TextBlock Text="Alignment" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <TextBlock Text="Alignment (not implemented)" FontWeight="Bold" Margin="0,0,0,8"/>
                                 
-                                <CheckBox x:Name="AlignConsecutiveAssignmentsCheckBox" Content="Align consecutive assignments" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="AlignConsecutiveDeclarationsCheckBox" Content="Align consecutive declarations" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="AlignConsecutiveAssignmentsCheckBox" Content="Align consecutive assignments" IsChecked="False" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="AlignConsecutiveDeclarationsCheckBox" Content="Align consecutive declarations" IsChecked="False" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                             </StackPanel>
                             
                             <!-- SourcePawn Specific -->
@@ -173,9 +173,9 @@
                                 <TextBlock Text="SourcePawn Specific" FontWeight="Bold" Margin="0,0,0,8"/>
                                 
                                 <CheckBox x:Name="SortIncludesCheckBox" Content="Sort includes" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="CompactFunctionParametersCheckBox" Content="Compact function parameters" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="CompactFunctionParametersCheckBox" Content="Compact function parameters (not implemented)" IsChecked="False" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                                 <CheckBox x:Name="RequireSemicolonsCheckBox" Content="Require semicolons" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="RemoveOptionalSemicolonsCheckBox" Content="Remove optional semicolons" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                                <CheckBox x:Name="RemoveOptionalSemicolonsCheckBox" Content="Remove optional semicolons (not implemented)" IsChecked="False" IsEnabled="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                                 
                                 <Grid Margin="0,5">
                                     <Grid.ColumnDefinitions>
