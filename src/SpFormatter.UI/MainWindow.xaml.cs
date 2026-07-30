@@ -312,34 +312,19 @@ public partial class MainWindow : Window
     {
         return new FormattingOptions
         {
-            // Core indentation and spacing options
             IndentSize = int.TryParse(IndentSizeTextBox.Text, out var size) ? size : 4,
             UseSpaces = UseSpacesCheckBox.IsChecked == true,
             SpaceAfterComma = SpaceAfterCommaCheckBox.IsChecked == true,
             SpaceAroundOperators = SpaceAroundOperatorsCheckBox.IsChecked == true,
             SpaceBeforeOpenParen = SpaceBeforeOpenParenCheckBox.IsChecked == true,
-            SpaceAfterSemicolon = SpaceAfterSemicolonCheckBox.IsChecked == true,
             SpaceInArrayBrackets = SpaceInArrayBracketsCheckBox.IsChecked == true,
-            
-            // Line break options
             NewLineAfterOpenBrace = NewLineAfterOpenBraceCheckBox.IsChecked == true,
-            NewLineBeforeCloseBrace = NewLineBeforeCloseBraceCheckBox.IsChecked == true,
-            NewLineAfterSemicolon = NewLineAfterSemicolonCheckBox.IsChecked == true,
             NewLineAfterInclude = NewLineAfterIncludeCheckBox.IsChecked == true,
             MaxLineLength = int.TryParse(MaxLineLengthTextBox.Text, out var length) ? length : 120,
-            
-            // Advanced formatting options
             PreserveEmptyLines = PreserveEmptyLinesCheckBox.IsChecked == true,
             MaxConsecutiveEmptyLines = int.TryParse(MaxConsecutiveEmptyLinesTextBox.Text, out var maxEmptyLines) ? maxEmptyLines : 2,
             SortIncludes = SortIncludesCheckBox.IsChecked == true,
-            IndentPreprocessor = IndentPreprocessorCheckBox.IsChecked == true,
-            AlignConsecutiveAssignments = AlignConsecutiveAssignmentsCheckBox.IsChecked == true,
-            AlignConsecutiveDeclarations = AlignConsecutiveDeclarationsCheckBox.IsChecked == true,
-            
-            // SourcePawn-specific options
-            CompactFunctionParameters = CompactFunctionParametersCheckBox.IsChecked == true,
             RequireSemicolons = RequireSemicolonsCheckBox.IsChecked == true,
-            RemoveOptionalSemicolons = RemoveOptionalSemicolonsCheckBox.IsChecked == true,
             LineEnding = GetSelectedLineEnding()
         };
     }

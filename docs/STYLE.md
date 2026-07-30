@@ -40,6 +40,11 @@ Product defaults for formatted SourcePawn. Goldens must follow this file, not ad
 
 - preserve empty lines with a small cap (`MaxConsecutiveEmptyLines`, default 2) once that path is trustworthy
 
-## What this file is not
+## Deferred (not options yet)
 
-This is not a full SourcePawn language guide. It only defines what the formatter should emit for supported constructs.
+- alignment of consecutive assignments / declarations
+- optional semicolon stripping / `#pragma semicolon 0` as a first-class mode
+- brace injection for bare `if` bodies as a silent default
+- top-level reordering as a silent default
+- indenting preprocessor directives
+

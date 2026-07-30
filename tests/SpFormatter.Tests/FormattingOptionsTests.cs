@@ -125,26 +125,6 @@ public class FormattingOptionsTests : FormatterTestBase
             options);
     }
 
-    [Fact]
-    public void TestSpaceAfterSemicolon_ForLoops()
-    {
-        var options = new FormattingOptions { SpaceAfterSemicolon = true };
-        AssertFormatEqualsWithOptionsFromFiles(
-            "FormattingOptions/SpacingOptions/space_after_semicolon_input.sp",
-            "FormattingOptions/SpacingOptions/space_after_semicolon_true_expected.sp",
-            options);
-    }
-
-    [Fact]
-    public void TestSpaceAfterSemicolon_False_ForLoops()
-    {
-        var options = new FormattingOptions { SpaceAfterSemicolon = false };
-        AssertFormatEqualsWithOptionsFromFiles(
-            "FormattingOptions/SpacingOptions/space_after_semicolon_input.sp",
-            "FormattingOptions/SpacingOptions/space_after_semicolon_false_expected.sp",
-            options);
-    }
-
     #endregion
 
     #region SourcePawn-Specific Options
@@ -343,49 +323,6 @@ public class FormattingOptionsTests : FormatterTestBase
             options);
     }
 
-    [Fact]
-    public void TestRemoveOptionalSemicolons_True()
-    {
-        var options = new FormattingOptions
-        {
-            RequireSemicolons = false,
-            RemoveOptionalSemicolons = true
-        };
-        AssertFormatEqualsWithOptionsFromFiles(
-            "FormattingOptions/SemicolonOptions/remove_optional_semicolons_input.sp",
-            "FormattingOptions/SemicolonOptions/remove_optional_semicolons_true_expected.sp",
-            options);
-    }
-
-    [Fact]
-    public void TestRemoveOptionalSemicolons_False()
-    {
-        var options = new FormattingOptions
-        {
-            RequireSemicolons = false,
-            RemoveOptionalSemicolons = false
-        };
-        AssertFormatEqualsWithOptionsFromFiles(
-            "FormattingOptions/SemicolonOptions/remove_optional_semicolons_input.sp",
-            "FormattingOptions/SemicolonOptions/remove_optional_semicolons_false_expected.sp",
-            options);
-    }
-
-    [Fact]
-    public void TestSemicolonOptions_PragmaStyleFormatting()
-    {
-        // Test #pragma semicolon 0 style formatting
-        var options = new FormattingOptions
-        {
-            RequireSemicolons = false,
-            RemoveOptionalSemicolons = true
-        };
-        AssertFormatEqualsWithOptionsFromFiles(
-            "FormattingOptions/SemicolonOptions/pragma_style_input.sp",
-            "FormattingOptions/SemicolonOptions/pragma_style_expected.sp",
-            options);
-    }
-
     #endregion
 
     #region Default Options Test
@@ -395,24 +332,19 @@ public class FormattingOptionsTests : FormatterTestBase
     {
         var defaultOptions = FormattingOptions.Default;
 
-        // Verify default values
         defaultOptions.IndentSize.Should().Be(4);
         defaultOptions.UseSpaces.Should().BeTrue();
         defaultOptions.SpaceAfterComma.Should().BeTrue();
         defaultOptions.SpaceAroundOperators.Should().BeTrue();
         defaultOptions.SpaceBeforeOpenParen.Should().BeFalse();
-        defaultOptions.SpaceAfterSemicolon.Should().BeTrue();
         defaultOptions.NewLineAfterOpenBrace.Should().BeTrue();
-        defaultOptions.NewLineBeforeCloseBrace.Should().BeTrue();
         defaultOptions.MaxLineLength.Should().Be(120);
         defaultOptions.PreserveEmptyLines.Should().BeTrue();
         defaultOptions.MaxConsecutiveEmptyLines.Should().Be(2);
         defaultOptions.SortIncludes.Should().BeFalse();
         defaultOptions.SpaceInArrayBrackets.Should().BeFalse();
         defaultOptions.NewLineAfterInclude.Should().BeTrue();
-        defaultOptions.CompactFunctionParameters.Should().BeFalse();
         defaultOptions.RequireSemicolons.Should().BeTrue();
-        defaultOptions.RemoveOptionalSemicolons.Should().BeFalse();
     }
 
     #endregion
