@@ -11,9 +11,9 @@ SourcePawn formatter for .NET. Parse with Tree-sitter, print with a pretty-print
 
 ## Current phase
 
-Salvage in progress. Platform is on .NET 10 with `SpFormatter.slnx`.
+Salvage underway past platform + docs + options shrink + expression AstPrinter + test pyramid + CLI/CI surface.
 
-Printer is still mostly the legacy god class in `src/SpFormatter/SourcePawnFormatter.cs`. New work should move toward `AstPrinter` + `LayoutRules` + `FormatResult`, not more patches in the monolith.
+Printer is still partly the legacy god class in `src/SpFormatter/SourcePawnFormatter.cs`. New work should keep moving constructs into `AstPrinter` + `LayoutRules` + `FormatResult`.
 
 ## Hard stops
 

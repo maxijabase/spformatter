@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build
+        run: dotnet build SpFormatter.slnx --configuration Release
+      - name: Test
+        run: dotnet test SpFormatter.slnx --configuration Release --no-build --verbosity minimal
+      - name: Format check corpus
+        run: |
+          dotnet build src/SpFormatter.Cli/SpFormatter.Cli.csproj --configuration Release
+          dotnet run --project src/SpFormatter.Cli --configuration Release --no-build -- corpus --dir --check --quiet

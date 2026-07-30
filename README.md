@@ -13,6 +13,17 @@ dotnet build SpFormatter.slnx
 dotnet test SpFormatter.slnx
 ```
 
+## CLI
+
+```powershell
+dotnet run --project src/SpFormatter.Cli -- path\to\file.sp
+dotnet run --project src/SpFormatter.Cli -- path\to\dir --dir --check
+dotnet run --project src/SpFormatter.Cli -- plugin.sp --backup
+dotnet run --project src/SpFormatter.Cli -- plugin.sp --indent 2 --quiet
+```
+
+Useful flags: `--output`, `--backup` (in-place with `.bak`), `--check`, `--dir`, `--indent`, `--use-tabs`, `--space-before-paren`, `--no-space-around-operators`.
+
 ## Projects
 
 - `src/SpFormatter` – core library
