@@ -4,24 +4,24 @@ namespace SpFormatter.Cli;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static int Main(string[] args)
     {
-        bool writeToFile = false;
+        bool writeSidecar = false;
         bool verboseOutput = true;
         bool dryRun = false;
         bool processDirectory = false;
         bool createBackup = false;
-        string inputFile = "";
+        bool checkOnly = false;
         var inputFiles = new List<string>();
-        
-        // Parse command line arguments
+        var options = FormattingOptions.Default;
+
         for (int i = 0; i < args.Length; i++)
         {
-            switch (args[i].ToLower())
+            switch (args[i].ToLowerInvariant())
             {
                 case "--output":
                 case "-o":
-                    writeToFile = true;
+                    writeSidecar = true;
                     break;
                 case "--quiet":
                 case "-q":
@@ -39,23 +39,40 @@ public class Program
                 case "-b":
                     createBackup = true;
                     break;
+                case "--check":
+                    checkOnly = true;
+                    break;
+                case "--indent":
+                    if (i + 1 >= args.Length || !int.TryParse(args[++i], out var indent) || indent < 0)
+                    {
+                        Console.Error.WriteLine("error: --indent requires a non-negative integer");
+                        return 1;
+                    }
+                    options.IndentSize = indent;
+                    options.UseSpaces = true;
+                    break;
+                case "--use-tabs":
+                    options.UseSpaces = false;
+                    break;
+                case "--space-before-paren":
+                    options.SpaceBeforeOpenParen = true;
+                    break;
+                case "--no-space-around-operators":
+                    options.SpaceAroundOperators = false;
+                    break;
                 case "--help":
                 case "-h":
                     ShowHelp();
-                    return;
+                    return 0;
                 default:
-                    if (args[i].StartsWith("-"))
+                    if (args[i].StartsWith('-'))
                     {
-                        Console.WriteLine($"❌ Unknown option: {args[i]}");
-                        Console.WriteLine("Use --help for usage information.");
-                        Environment.Exit(1);
+                        Console.Error.WriteLine($"error: unknown option {args[i]}");
+                        Console.Error.WriteLine("use --help for usage information.");
+                        return 1;
                     }
-                    else
-                    {
-                        inputFiles.Add(args[i]);
-                        if (string.IsNullOrEmpty(inputFile))
-                            inputFile = args[i];
-                    }
+
+                    inputFiles.Add(args[i]);
                     break;
             }
         }
@@ -66,276 +83,307 @@ public class Program
             Console.WriteLine("===============================");
         }
 
-        // Gather all files to process
-        var filesToProcess = new List<string>();
-        
         if (inputFiles.Count == 0)
         {
-            // No files specified, use default test code
             if (verboseOutput)
-            {
-                Console.WriteLine("🧪 No files specified, using default test code (use --help for usage)");
-            }
-            ProcessDefaultCode(verboseOutput, writeToFile, dryRun);
-            return;
+                Console.WriteLine("No files specified, using default test code (use --help for usage)");
+            return ProcessDefaultCode(verboseOutput, options) ? 0 : 1;
         }
-        
-        // Process each input (file or directory)
+
+        var filesToProcess = new List<string>();
         foreach (var input in inputFiles)
         {
             if (processDirectory || Directory.Exists(input))
             {
-                // Directory processing
-                if (Directory.Exists(input))
+                if (!Directory.Exists(input))
                 {
-                    var spFiles = Directory.GetFiles(input, "*.sp", SearchOption.AllDirectories);
-                    var incFiles = Directory.GetFiles(input, "*.inc", SearchOption.AllDirectories);
-                    filesToProcess.AddRange(spFiles);
-                    filesToProcess.AddRange(incFiles);
-                    
-                    if (verboseOutput)
-                    {
-                        Console.WriteLine($"📁 Found {spFiles.Length} .sp files and {incFiles.Length} .inc files in {input}");
-                    }
+                    Console.Error.WriteLine($"error: directory not found: {input}");
+                    return 1;
                 }
-                else
-                {
-                    Console.WriteLine($"❌ Directory not found: {input}");
-                    Environment.Exit(1);
-                }
+
+                var spFiles = Directory.GetFiles(input, "*.sp", SearchOption.AllDirectories);
+                var incFiles = Directory.GetFiles(input, "*.inc", SearchOption.AllDirectories);
+                filesToProcess.AddRange(spFiles);
+                filesToProcess.AddRange(incFiles);
+
+                if (verboseOutput)
+                    Console.WriteLine($"Found {spFiles.Length} .sp files and {incFiles.Length} .inc files in {input}");
             }
             else if (File.Exists(input))
             {
-                // Single file
                 filesToProcess.Add(input);
             }
             else
             {
-                Console.WriteLine($"❌ File not found: {input}");
-                Environment.Exit(1);
+                Console.Error.WriteLine($"error: file not found: {input}");
+                return 1;
             }
         }
-        
+
         if (verboseOutput)
         {
-            Console.WriteLine($"📊 Processing {filesToProcess.Count} file(s)");
+            Console.WriteLine($"Processing {filesToProcess.Count} file(s)");
             if (dryRun)
-                Console.WriteLine("🔍 DRY RUN MODE - No files will be modified");
+                Console.WriteLine("DRY RUN - no files will be modified");
+            if (checkOnly)
+                Console.WriteLine("CHECK - exit non-zero if formatting would change a file");
             Console.WriteLine();
         }
-        
-        // Process all files
-        ProcessFiles(filesToProcess, writeToFile, verboseOutput, dryRun, createBackup);
+
+        return ProcessFiles(filesToProcess, writeSidecar, verboseOutput, dryRun, createBackup, checkOnly, options);
     }
-    
-    private static void ProcessDefaultCode(bool verboseOutput, bool writeToFile, bool dryRun)
+
+    private static bool ProcessDefaultCode(bool verboseOutput, FormattingOptions options)
     {
-        var testCode = @"
+        var testCode = """
 public void OnPluginStart()
 {
-    HookEvent(""player_death"", Event_PlayerDeath);
-    RegConsoleCmd(""sm_test"", Command_Test);
+    HookEvent("player_death", Event_PlayerDeath);
+    RegConsoleCmd("sm_test", Command_Test);
 }
 
 public Action Command_Test(int client, int args)
 {
     if (IsValidClient(client))
     {
-        PrintToChat(client, ""Hello World!"");
+        PrintToChat(client, "Hello World!");
         return Plugin_Handled;
     }
     return Plugin_Continue;
-}";
+}
+""";
 
-        ProcessSingleContent(testCode, "default", verboseOutput, writeToFile, dryRun, false);
+        return ProcessFileContent(
+            testCode,
+            "default",
+            showDetails: verboseOutput,
+            writeSidecar: false,
+            dryRun: false,
+            createBackup: false,
+            checkOnly: false,
+            options).Success;
     }
-    
-    private static void ProcessFiles(List<string> filesToProcess, bool writeToFile, bool verboseOutput, bool dryRun, bool createBackup)
+
+    private static int ProcessFiles(
+        List<string> filesToProcess,
+        bool writeSidecar,
+        bool verboseOutput,
+        bool dryRun,
+        bool createBackup,
+        bool checkOnly,
+        FormattingOptions options)
     {
         int successCount = 0;
         int errorCount = 0;
-        
+        int driftCount = 0;
+
         foreach (var file in filesToProcess)
         {
             try
             {
                 if (verboseOutput)
-                {
-                    Console.WriteLine($"📝 Processing: {file}");
-                }
-                
+                    Console.WriteLine($"Processing: {file}");
+
                 var content = File.ReadAllText(file);
-                var result = ProcessSingleContent(content, file, verboseOutput && filesToProcess.Count == 1, writeToFile, dryRun, createBackup);
-                
-                if (result)
-                {
-                    successCount++;
-                    if (verboseOutput && filesToProcess.Count > 1)
-                    {
-                        Console.WriteLine($"✅ {file}");
-                    }
-                }
-                else
+                var result = ProcessFileContent(
+                    content,
+                    file,
+                    showDetails: verboseOutput && filesToProcess.Count == 1,
+                    writeSidecar,
+                    dryRun,
+                    createBackup,
+                    checkOnly,
+                    options);
+
+                if (!result.Success)
                 {
                     errorCount++;
                     if (verboseOutput && filesToProcess.Count > 1)
-                    {
-                        Console.WriteLine($"❌ {file}");
-                    }
+                        Console.WriteLine($"failed: {file}");
+                    continue;
                 }
+
+                successCount++;
+                if (result.WouldChange)
+                    driftCount++;
+
+                if (verboseOutput && filesToProcess.Count > 1)
+                    Console.WriteLine($"ok: {file}");
             }
             catch (Exception ex)
             {
                 errorCount++;
-                Console.WriteLine($"❌ Error processing {file}: {ex.Message}");
+                Console.Error.WriteLine($"error processing {file}: {ex.Message}");
             }
         }
-        
+
         if (verboseOutput && filesToProcess.Count > 1)
         {
             Console.WriteLine();
-            Console.WriteLine($"📊 Summary: {successCount} successful, {errorCount} errors");
+            Console.WriteLine($"Summary: {successCount} successful, {errorCount} errors, {driftCount} would change");
         }
-        
+
         if (errorCount > 0)
-        {
-            Environment.Exit(1);
-        }
+            return 1;
+        if (checkOnly && driftCount > 0)
+            return 2;
+        return 0;
     }
-    
-    private static bool ProcessSingleContent(string content, string filename, bool showDetails, bool writeToFile, bool dryRun, bool createBackup)
+
+    private sealed record ProcessOutcome(bool Success, bool WouldChange);
+
+    private static ProcessOutcome ProcessFileContent(
+        string content,
+        string filename,
+        bool showDetails,
+        bool writeSidecar,
+        bool dryRun,
+        bool createBackup,
+        bool checkOnly,
+        FormattingOptions options)
     {
         try
         {
             using var parser = new SourcePawnParser();
-            
+
             if (showDetails)
             {
-                Console.WriteLine("✅ SourcePawn parser initialized successfully!");
+                Console.WriteLine("SourcePawn parser initialized successfully!");
                 Console.WriteLine();
             }
-            
-            // Check for syntax errors first
+
             var syntaxErrors = parser.GetSyntaxErrors(content);
             if (syntaxErrors.Count > 0)
             {
-                Console.WriteLine($"⚠️ Syntax errors found in {filename}:");
-                foreach (var error in syntaxErrors.Take(5)) // Show first 5 errors
-                {
+                Console.WriteLine($"Syntax errors found in {filename}:");
+                foreach (var error in syntaxErrors.Take(5))
                     Console.WriteLine($"  Line {error.StartLine}:{error.StartColumn} - {error.Message}");
-                }
                 if (syntaxErrors.Count > 5)
-                {
                     Console.WriteLine($"  ... and {syntaxErrors.Count - 5} more errors");
-                }
                 Console.WriteLine("Continuing with formatting (may produce incomplete results)");
                 Console.WriteLine();
             }
-            
-            if (showDetails && syntaxErrors.Count == 0)
+            else if (showDetails)
             {
-                Console.WriteLine("✅ Code parsed successfully - valid syntax!");
+                Console.WriteLine("Code parsed successfully - valid syntax!");
                 Console.WriteLine();
             }
-            
-            // Format the code
-            using var formatter = new SourcePawnFormatter();
-            var formatted = formatter.Format(content);
-            
-            if (filename != "default" && (writeToFile || dryRun))
+
+            using var formatter = new SourcePawnFormatter(options);
+            var formatResult = formatter.FormatWithResult(content);
+            if (!formatResult.Success)
             {
-                var outputPath = writeToFile ? 
-                    Path.GetFileNameWithoutExtension(filename) + "_formatted" + Path.GetExtension(filename) :
-                    filename;
-                    
-                if (dryRun)
-                {
-                    // Dry run: just report what would be done
-                    var changes = content != formatted;
-                    if (changes)
-                    {
-                        Console.WriteLine($"🔍 Would modify: {filename} → {outputPath}");
-                    }
-                    else if (showDetails)
-                    {
-                        Console.WriteLine($"🔍 No changes needed: {filename}");
-                    }
-                }
-                else
-                {
-                    // Create backup if requested
-                    if (createBackup && !writeToFile)
-                    {
-                        var backupPath = filename + ".bak";
-                        File.Copy(filename, backupPath, true);
-                        if (showDetails)
-                        {
-                            Console.WriteLine($"💾 Backup created: {backupPath}");
-                        }
-                    }
-                    
-                    // Write formatted content
-                    File.WriteAllText(outputPath, formatted);
-                    if (showDetails || !writeToFile)
-                    {
-                        Console.WriteLine($"✅ Formatted code written to: {outputPath}");
-                    }
-                }
+                Console.Error.WriteLine($"error formatting {filename}: {formatResult.Errors.FirstOrDefault()?.Message}");
+                return new ProcessOutcome(false, false);
             }
-            else
+
+            var formatted = formatResult.Text;
+            var wouldChange = !string.Equals(
+                content.Replace("\r\n", "\n"),
+                formatted.Replace("\r\n", "\n"),
+                StringComparison.Ordinal);
+
+            if (filename == "default")
             {
-                // Output to console
                 if (showDetails)
-                {
                     Console.WriteLine("=== Formatted Code ===");
-                }
                 Console.WriteLine(formatted);
+                return new ProcessOutcome(true, wouldChange);
             }
-            
-            return true;
+
+            if (checkOnly)
+            {
+                if (wouldChange)
+                    Console.WriteLine($"would reformat: {filename}");
+                else if (showDetails)
+                    Console.WriteLine($"already formatted: {filename}");
+                return new ProcessOutcome(true, wouldChange);
+            }
+
+            if (dryRun)
+            {
+                if (wouldChange)
+                {
+                    var target = writeSidecar
+                        ? Path.GetFileNameWithoutExtension(filename) + "_formatted" + Path.GetExtension(filename)
+                        : filename;
+                    Console.WriteLine($"Would modify: {filename} -> {target}");
+                }
+                else if (showDetails)
+                {
+                    Console.WriteLine($"No changes needed: {filename}");
+                }
+
+                return new ProcessOutcome(true, wouldChange);
+            }
+
+            if (createBackup)
+            {
+                var backupPath = filename + ".bak";
+                File.Copy(filename, backupPath, true);
+                if (showDetails)
+                    Console.WriteLine($"Backup created: {backupPath}");
+                File.WriteAllText(filename, formatted);
+                if (showDetails)
+                    Console.WriteLine($"Formatted in place: {filename}");
+                return new ProcessOutcome(true, wouldChange);
+            }
+
+            if (writeSidecar)
+            {
+                var directory = Path.GetDirectoryName(Path.GetFullPath(filename))!;
+                var outputName = Path.GetFileNameWithoutExtension(filename) + "_formatted" + Path.GetExtension(filename);
+                var fullOutput = Path.Combine(directory, outputName);
+                File.WriteAllText(fullOutput, formatted);
+                Console.WriteLine($"Formatted code written to: {fullOutput}");
+                return new ProcessOutcome(true, wouldChange);
+            }
+
+            if (showDetails)
+                Console.WriteLine("=== Formatted Code ===");
+            Console.WriteLine(formatted);
+            return new ProcessOutcome(true, wouldChange);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error processing {filename}: {ex.Message}");
-            return false;
+            Console.Error.WriteLine($"error processing {filename}: {ex.Message}");
+            return new ProcessOutcome(false, false);
         }
     }
-    
+
     private static void ShowHelp()
     {
-        Console.WriteLine("SourcePawn Formatter - CLI Tool");
-        Console.WriteLine("===============================");
-        Console.WriteLine();
-        Console.WriteLine("Usage:");
-        Console.WriteLine("  SpFormatter.Cli [files/directories...] [options]");
-        Console.WriteLine();
-        Console.WriteLine("Arguments:");
-        Console.WriteLine("  files                SourcePawn files (.sp, .inc) to format");
-        Console.WriteLine("  directories          Directories to process (use --dir to enable)");
-        Console.WriteLine();
-        Console.WriteLine("Options:");
-        Console.WriteLine("  -o, --output         Write formatted code to [filename]_formatted.sp");
-        Console.WriteLine("  -q, --quiet          Suppress verbose output");
-        Console.WriteLine("  -d, --dry-run        Show what would be changed without modifying files");
-        Console.WriteLine("  -b, --backup         Create .bak files before in-place formatting");
-        Console.WriteLine("      --dir            Enable directory processing (recursive)");
-        Console.WriteLine("  -h, --help           Show this help message");
-        Console.WriteLine();
-        Console.WriteLine("Examples:");
-        Console.WriteLine("  SpFormatter.Cli test.sp                    # Format single file to console");
-        Console.WriteLine("  SpFormatter.Cli test.sp --output           # Write to test_formatted.sp");
-        Console.WriteLine("  SpFormatter.Cli test.sp --backup           # Format in-place with backup");
-        Console.WriteLine("  SpFormatter.Cli *.sp --output              # Format multiple files");
-        Console.WriteLine("  SpFormatter.Cli src/ --dir                 # Format all .sp files in directory");
-        Console.WriteLine("  SpFormatter.Cli src/ --dir --dry-run       # Preview directory changes");
-        Console.WriteLine("  SpFormatter.Cli test.sp --quiet --output   # Silent processing");
-        Console.WriteLine();
-        Console.WriteLine("Features:");
-        Console.WriteLine("  • Single file and batch processing");
-        Console.WriteLine("  • Recursive directory processing");
-        Console.WriteLine("  • Syntax error detection and reporting");
-        Console.WriteLine("  • Dry-run mode for safe previewing");
-        Console.WriteLine("  • Automatic backup creation");
-        Console.WriteLine("  • Support for .sp and .inc files");
+        Console.WriteLine("""
+SourcePawn Formatter - CLI Tool
+
+Usage:
+  SpFormatter.Cli [files/directories...] [options]
+
+Arguments:
+  files                SourcePawn files (.sp, .inc) to format
+  directories          Directories to process (use --dir to enable)
+
+Options:
+  -o, --output         Write formatted code to [filename]_formatted.sp
+  -q, --quiet          Suppress verbose output
+  -d, --dry-run        Show what would be changed without modifying files
+  -b, --backup         Create .bak files and write formatted code in place
+      --check          Exit non-zero if any file would change
+      --dir            Enable directory processing (recursive)
+      --indent <n>     Indent size when using spaces
+      --use-tabs       Indent with tabs
+      --space-before-paren
+                       Insert a space before '('
+      --no-space-around-operators
+                       Disable spaces around operators
+  -h, --help           Show this help message
+
+Examples:
+  SpFormatter.Cli test.sp
+  SpFormatter.Cli test.sp --output
+  SpFormatter.Cli test.sp --backup
+  SpFormatter.Cli src/ --dir --check
+  SpFormatter.Cli plugin.sp --indent 2 --quiet
+""");
     }
 }

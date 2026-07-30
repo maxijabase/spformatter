@@ -288,7 +288,7 @@ public void OnPluginStart(){PrintToServer(""Plugin started"");}";
 
     #region Backup Tests
 
-    [Fact(Skip = "CLI backup/in-place write is incomplete; fixed in product surface phase")]
+    [Fact]
     public void TestCli_BackupFlag_CreatesBackupFile()
     {
 
@@ -308,7 +308,7 @@ public void OnPluginStart(){PrintToServer(""Plugin started"");}";
         modifiedContent.Should().Contain("int original = 123;", "Original file should be formatted");
     }
 
-    [Fact(Skip = "CLI backup/in-place write is incomplete; fixed in product surface phase")]
+    [Fact]
     public void TestCli_BackupFlag_ShortForm()
     {
 
@@ -343,15 +343,14 @@ public void OnPluginStart(){PrintToServer(""Plugin started"");}";
     [Fact]
     public void TestCli_InvalidOption_ShowsError()
     {
-
         try
         {
             var output = RunCli("--invalid-option");
-            output.Should().Contain("Unknown option");
+            output.ToLowerInvariant().Should().Contain("unknown option");
         }
         catch (InvalidOperationException ex)
         {
-            ex.Message.Should().Contain("Unknown option");
+            ex.Message.ToLowerInvariant().Should().Contain("unknown option");
         }
     }
 
