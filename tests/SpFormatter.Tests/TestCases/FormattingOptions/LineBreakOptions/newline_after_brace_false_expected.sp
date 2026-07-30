@@ -1,3 +1,3 @@
 void TestControlStructure() { if(condition) {
-    statement
+    statement;
 } }

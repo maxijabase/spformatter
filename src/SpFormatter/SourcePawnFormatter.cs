@@ -400,9 +400,23 @@ public class SourcePawnFormatter : IDisposable
                 }
             }
         }
+
+        var signature = currentIndent;
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i];
+            if (i > 0)
+            {
+                if (part.StartsWith("("))
+                    signature += _options.SpaceBeforeOpenParen ? " " : "";
+                else
+                    signature += " ";
+            }
+
+            signature += part;
+        }
         
-        // Join with appropriate spacing for function declarations (native/forward)
-        return currentIndent + string.Join(" ", parts) + ";";
+        return signature + ";";
     }
     
     private string FormatFunctionDefinition(Node node, int indentLevel, string? originalSource = null)
@@ -661,8 +675,8 @@ public class SourcePawnFormatter : IDisposable
         if (trimmed.Contains("(") && trimmed.EndsWith(")"))
             return true;
             
-        // Assignments: Something = Something
-        if (trimmed.Contains(" = "))
+        // Assignments: Something = Something or compound forms
+        if (trimmed.Contains('='))
             return true;
             
         // Update expressions: i++, ++i
@@ -691,21 +705,14 @@ public class SourcePawnFormatter : IDisposable
             }
         }
         
-        // Join with appropriate spacing and add semicolon based on RequireSemicolons option
         var joined = string.Join(" ", parts);
 
-        if (hasSemicolon || joined.EndsWith(";"))
+        if ((hasSemicolon || _options.RequireSemicolons) && !joined.EndsWith(";"))
         {
-            return currentIndent + joined; // Already has semicolon
+            joined += ";";
         }
-        else if (_options.RequireSemicolons)
-        {
-            return currentIndent + joined + ";"; // Add semicolon
-        }
-        else
-        {
-            return currentIndent + joined; // Don't add semicolon
-        }
+
+        return currentIndent + joined;
     }
     
     private string FormatConditionStatement(Node node, int indentLevel)
@@ -1355,6 +1362,11 @@ public class SourcePawnFormatter : IDisposable
 
     private string AddSpacesAroundBinaryOperators(string text)
     {
+        if (!_options.SpaceAroundOperators)
+        {
+            return RemoveSpacesAroundUnaryOperators(text);
+        }
+
         // Binary operators that should have spaces around them - ORDER MATTERS! (longest first)
         var binaryOperators = new[] { 
             // Multi-character operators first (to prevent splitting)
