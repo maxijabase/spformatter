@@ -145,9 +145,6 @@ public class SourcePawnFormatter : IDisposable
             case "function_definition":
                 return FormatFunctionDefinition(node, indentLevel, originalSource);
             
-            case "block":
-                return FormatBlock(node, indentLevel);
-            
             case "expression_statement":
                 return FormatExpressionStatement(node, indentLevel);
             
@@ -430,7 +427,7 @@ public class SourcePawnFormatter : IDisposable
         if (body != null && (useCompact || !_options.NewLineAfterOpenBrace))
         {
             // Use compact single-line formatting
-            signature += " " + FormatBlockCompact(body);
+            signature += " " + _astPrinter.PrintCompactBlock(body);
             return signature;
         }
         else if (body != null)
@@ -554,72 +551,6 @@ public class SourcePawnFormatter : IDisposable
         }
         
         return result;
-    }
-
-    private string FormatBlock(Node node, int indentLevel)
-    {
-        var result = new List<string>();
-        var currentIndent = GetIndent(indentLevel);
-        
-        result.Add(currentIndent + "{");
-        
-        foreach (var child in node.Children)
-        {
-            if (child.Type != "{" && child.Type != "}")
-            {
-                var formatted = FormatNode(child, indentLevel + 1);
-                if (!string.IsNullOrWhiteSpace(formatted))
-                {
-                    // Add semicolon to statements that need them but don't have them (based on RequireSemicolons option)
-                    if (_options.RequireSemicolons && NeedsStatement(child.Type) && !formatted.TrimEnd().EndsWith(";") && !formatted.Contains("{"))
-                    {
-                        formatted = formatted.TrimEnd() + ";";
-                    }
-                    // Also check by pattern - if it looks like a function call without semicolon
-                    else if (_options.RequireSemicolons && LooksLikeStatement(formatted) && !formatted.TrimEnd().EndsWith(";") && !formatted.Contains("{"))
-                    {
-                        formatted = formatted.TrimEnd() + ";";
-                    }
-                    result.Add(formatted);
-                }
-            }
-        }
-        
-        result.Add(currentIndent + "}");
-        
-        return string.Join(_options.LineEnding, result);
-    }
-    
-    private bool NeedsStatement(string nodeType)
-    {
-        return nodeType switch
-        {
-            "call_expression" => true,
-            "assignment_expression" => true,
-            "update_expression" => true,
-            "expression_statement" => false, // Already handled by FormatExpressionStatement
-            _ => false
-        };
-    }
-    
-    private bool LooksLikeStatement(string formatted)
-    {
-        var trimmed = formatted.Trim();
-        
-        // Function calls: Something(...)
-        if (trimmed.Contains("(") && trimmed.EndsWith(")"))
-            return true;
-            
-        // Assignments: Something = Something or compound forms
-        if (trimmed.Contains('='))
-            return true;
-            
-        // Update expressions: i++, ++i
-        if (trimmed.EndsWith("++") || trimmed.StartsWith("++") || 
-            trimmed.EndsWith("--") || trimmed.StartsWith("--"))
-            return true;
-            
-        return false;
     }
 
     private string FormatExpressionStatement(Node node, int indentLevel)
@@ -1272,39 +1203,6 @@ public class SourcePawnFormatter : IDisposable
         }
         
         return false;
-    }
-    
-    private string FormatBlockCompact(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            if (child.Type != "{" && child.Type != "}")
-            {
-                var formatted = FormatNode(child, 0);
-                if (!string.IsNullOrWhiteSpace(formatted))
-                {
-                    // Ensure statements have semicolons if needed (based on RequireSemicolons option)
-                    if (_options.RequireSemicolons && NeedsStatement(child.Type) && !formatted.TrimEnd().EndsWith(";") && !formatted.Contains("{"))
-                    {
-                        formatted = formatted.TrimEnd() + ";";
-                    }
-                    else if (_options.RequireSemicolons && LooksLikeStatement(formatted) && !formatted.TrimEnd().EndsWith(";") && !formatted.Contains("{"))
-                    {
-                        formatted = formatted.TrimEnd() + ";";
-                    }
-                    parts.Add(formatted.Trim());
-                }
-            }
-        }
-        
-        if (parts.Count == 0)
-        {
-            return "{ }";
-        }
-        
-        return "{ " + string.Join(" ", parts) + " }";
     }
     
     private string? TryFormatAsExpression(string sourceCode)

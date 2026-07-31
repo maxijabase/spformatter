@@ -51,6 +51,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Call args | AstPrinter + JoinComma |
 | Simple functions / natives / params | AstPrinter; misparse fallbacks still legacy |
 | Arrays / indexed access | AstPrinter; SpaceInArrayBrackets option |
+| Blocks (incl. compact) | AstPrinter; NewLineAfterOpenBrace for function bodies |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -65,7 +66,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 2. Blocks
 
-- Status: `Todo`
+- Status: `Done`
 - Move `block` (and compact block behavior needed by callers) into `AstPrinter`
 - Preserve statement shape. Semicolon policy via existing options only
 - Remove or shrink legacy `FormatBlock` / `FormatBlockCompact`

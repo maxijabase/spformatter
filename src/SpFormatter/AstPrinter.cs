@@ -87,11 +87,19 @@ public sealed class AstPrinter
             case "fixed_dimension":
                 result = FormatArrayAccess(node);
                 return true;
+            case "block":
+                result = FormatBlock(node, indentLevel);
+                return true;
             default:
                 result = string.Empty;
                 return false;
         }
     }
+
+    /// <summary>
+    /// Single-line block used when NewLineAfterOpenBrace is false on function bodies.
+    /// </summary>
+    public string PrintCompactBlock(Node node) => FormatBlockCompact(node);
 
     private string FormatArrayAccess(Node node)
     {
@@ -166,12 +174,6 @@ public sealed class AstPrinter
             }
         }
 
-        if (body != null && !_layout.Options.NewLineAfterOpenBrace)
-        {
-            result = string.Empty;
-            return false;
-        }
-
         var signature = _layout.Indent(indentLevel);
         if (visibility != null)
             signature += _formatChild(visibility, 0) + " ";
@@ -193,8 +195,105 @@ public sealed class AstPrinter
             return true;
         }
 
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            result = signature + " " + FormatBlockCompact(body);
+            return true;
+        }
+
         result = signature + _layout.Options.LineEnding + _formatChild(body, indentLevel);
         return true;
+    }
+
+    private string FormatBlock(Node node, int indentLevel)
+    {
+        var result = new List<string>
+        {
+            _layout.Indent(indentLevel) + "{"
+        };
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "{" or "}")
+                continue;
+
+            var formatted = _formatChild(child, indentLevel + 1);
+            if (string.IsNullOrWhiteSpace(formatted))
+                continue;
+
+            if (_layout.Options.RequireSemicolons
+                && NeedsStatementSemicolon(child.Type)
+                && !formatted.TrimEnd().EndsWith(";")
+                && !formatted.Contains('{'))
+            {
+                formatted = formatted.TrimEnd() + ";";
+            }
+            else if (_layout.Options.RequireSemicolons
+                     && LooksLikeStatementNeedingSemicolon(formatted)
+                     && !formatted.TrimEnd().EndsWith(";")
+                     && !formatted.Contains('{'))
+            {
+                formatted = formatted.TrimEnd() + ";";
+            }
+
+            result.Add(formatted);
+        }
+
+        result.Add(_layout.Indent(indentLevel) + "}");
+        return string.Join(_layout.Options.LineEnding, result);
+    }
+
+    private string FormatBlockCompact(Node node)
+    {
+        var parts = new List<string>();
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "{" or "}")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (string.IsNullOrWhiteSpace(formatted))
+                continue;
+
+            if (_layout.Options.RequireSemicolons
+                && NeedsStatementSemicolon(child.Type)
+                && !formatted.TrimEnd().EndsWith(";")
+                && !formatted.Contains('{'))
+            {
+                formatted = formatted.TrimEnd() + ";";
+            }
+            else if (_layout.Options.RequireSemicolons
+                     && LooksLikeStatementNeedingSemicolon(formatted)
+                     && !formatted.TrimEnd().EndsWith(";")
+                     && !formatted.Contains('{'))
+            {
+                formatted = formatted.TrimEnd() + ";";
+            }
+
+            parts.Add(formatted.Trim());
+        }
+
+        if (parts.Count == 0)
+            return "{ }";
+
+        return "{ " + string.Join(" ", parts) + " }";
+    }
+
+    private static bool NeedsStatementSemicolon(string nodeType) =>
+        nodeType is "call_expression" or "assignment_expression" or "update_expression";
+
+    private static bool LooksLikeStatementNeedingSemicolon(string formatted)
+    {
+        var trimmed = formatted.Trim();
+        if (trimmed.Contains('(') && trimmed.EndsWith(')'))
+            return true;
+        if (trimmed.Contains('='))
+            return true;
+        if (trimmed.EndsWith("++") || trimmed.StartsWith("++")
+            || trimmed.EndsWith("--") || trimmed.StartsWith("--"))
+            return true;
+        return false;
     }
 
     private string FormatFunctionDeclaration(Node node, int indentLevel)
