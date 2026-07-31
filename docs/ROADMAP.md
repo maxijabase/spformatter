@@ -215,6 +215,29 @@ Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chu
 - Preserve `Tag:` without inserting spaces (`Handle:x`, not `Handle : x`)
 - `old_type` / `old_type_cast` / `old_variable_declaration_statement` in `AstPrinter`; JoinDeclarationParts + UnknownNodePrinter glue after `:`
 
+### Step 20. Plain enum printer
+
+- Status: `Done`
+- Typed `AstPrinter` for `enum` / `enum_entries` / `enum_entry`
+- No grammar wait; dialect-tolerant (named, anonymous, optional increment)
+
+### Step 21. Operator alias printers
+
+- Status: `Done`
+- Typed `AstPrinter` for `alias_declaration` / `alias_assignment` / `alias_operator`
+- Legacy surface still present in real code; keep even though SP 1.13 removes overloads
+
+### Step 22. Product version 0.1.0
+
+- Status: `Todo`
+- Central version via `Directory.Build.props` (or equivalent); start at `0.1.0`
+
+### Step 23. Clean corpus layout pass
+
+- Status: `Todo`
+- Format a handful of already-clean SM includes/plugins; fix layout quirks only
+- Do not chase ERROR-parse forms; no grammar wait
+
 ## Deferred forever unless product asks
 
 Do not schedule these unless the user explicitly expands scope:

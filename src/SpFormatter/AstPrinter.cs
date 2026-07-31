@@ -185,6 +185,15 @@ public sealed class AstPrinter
             case "methodmap_visibility":
                 result = "public";
                 return true;
+            case "enum":
+                result = FormatEnum(node, indentLevel);
+                return true;
+            case "enum_entries":
+                result = FormatEnumEntries(node, indentLevel);
+                return true;
+            case "enum_entry":
+                result = FormatEnumEntry(node, indentLevel);
+                return true;
             case "enum_struct":
                 result = FormatEnumStruct(node, indentLevel);
                 return true;
@@ -193,6 +202,17 @@ public sealed class AstPrinter
                 return true;
             case "enum_struct_method":
                 result = FormatEnumStructMethod(node, indentLevel);
+                return true;
+            case "alias_declaration":
+                result = FormatAliasDeclaration(node, indentLevel);
+                return true;
+            case "alias_assignment":
+                result = FormatAliasAssignment(node, indentLevel);
+                return true;
+            case "alias_operator":
+            case "operator":
+            case "function_declaration_kind":
+                result = node.Text;
                 return true;
             case "typedef":
                 result = FormatTypedef(node, indentLevel);
@@ -254,6 +274,16 @@ public sealed class AstPrinter
             case "~":
             case "=":
             case "<":
+            case "<<=":
+            case ">>=":
+            case "+=":
+            case "-=":
+            case "*=":
+            case "/=":
+            case "|=":
+            case "&=":
+            case "^=":
+            case "~=":
                 result = node.Text;
                 return true;
             default:
@@ -1101,6 +1131,215 @@ public sealed class AstPrinter
             }
 
             if (signature.EndsWith("~") || signature.EndsWith("= ") || signature.EndsWith(':'))
+            {
+                signature += part;
+                continue;
+            }
+
+            signature += " " + part;
+        }
+
+        return signature;
+    }
+
+    private string FormatEnum(Node node, int indentLevel)
+    {
+        var headerParts = new List<string> { "enum" };
+        string? entries = null;
+        var inIncrement = false;
+        var incrementParts = new List<string>();
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "enum":
+                case ";":
+                    break;
+                case "enum_entries":
+                    entries = FormatEnumEntries(child, indentLevel);
+                    break;
+                case "(":
+                    inIncrement = true;
+                    break;
+                case ")":
+                    inIncrement = false;
+                    break;
+                case ":":
+                    if (headerParts.Count > 0)
+                        headerParts[^1] = headerParts[^1] + ":";
+                    break;
+                default:
+                    if (inIncrement)
+                    {
+                        var part = _formatChild(child, 0);
+                        if (string.IsNullOrEmpty(part))
+                            break;
+                        if (_layout.IsBinaryOrAssignmentOperator(child.Type))
+                            incrementParts.Add(_layout.FormatAssignmentOperator(part.Trim()));
+                        else
+                            incrementParts.Add(part);
+                    }
+                    else
+                    {
+                        var part = _formatChild(child, 0);
+                        if (!string.IsNullOrEmpty(part))
+                            headerParts.Add(part);
+                    }
+
+                    break;
+            }
+        }
+
+        var header = _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(headerParts);
+        if (incrementParts.Count > 0)
+            header += "(" + string.Join("", incrementParts).Trim() + ")";
+
+        if (entries == null)
+            return header + ";";
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+            return header + " " + entries.TrimStart() + ";";
+
+        return header + _layout.Options.LineEnding + entries + ";";
+    }
+
+    private string FormatEnumEntries(Node node, int indentLevel)
+    {
+        var entries = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "{" or "}" or ",")
+                continue;
+
+            if (child.Type == "enum_entry")
+            {
+                entries.Add(FormatEnumEntry(child, indentLevel + 1) + ",");
+                continue;
+            }
+
+            var formatted = _formatChild(child, indentLevel + 1);
+            if (!string.IsNullOrWhiteSpace(formatted))
+                entries.Add(formatted);
+        }
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = string.Join(" ", entries.Select(e => e.Trim()));
+            return "{ " + inner + " }";
+        }
+
+        var lines = new List<string> { _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(entries);
+        lines.Add(_layout.Indent(indentLevel) + "}");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatEnumEntry(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ":")
+            {
+                if (parts.Count > 0)
+                    parts[^1] = parts[^1] + ":";
+                continue;
+            }
+
+            if (child.Type == "=")
+            {
+                parts.Add("=");
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.Indent(indentLevel) + JoinMethodmapSignatureParts(parts);
+    }
+
+    private string FormatAliasDeclaration(Node node, int indentLevel)
+    {
+        Node? body = null;
+        var parts = new List<string>();
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "block" || child.Type.EndsWith("_statement"))
+            {
+                body = child;
+                continue;
+            }
+
+            if (child.Type == ";")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var signature = _layout.Indent(indentLevel) + JoinAliasSignatureParts(parts);
+        if (body == null)
+            return signature + ";";
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+            return signature + " " + (body.Type == "block" ? FormatBlockCompact(body) : _formatChild(body, 0).Trim());
+
+        return signature + _layout.Options.LineEnding + _formatChild(body, indentLevel);
+    }
+
+    private string FormatAliasAssignment(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+                continue;
+
+            if (child.Type == "=")
+            {
+                parts.Add("=");
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.Indent(indentLevel) + JoinAliasSignatureParts(parts) + ";";
+    }
+
+    private static string JoinAliasSignatureParts(IReadOnlyList<string> parts)
+    {
+        // "operator" must stay glued to the alias operator: operator++ / operator*
+        var signature = "";
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i];
+            if (i == 0)
+            {
+                signature = part;
+                continue;
+            }
+
+            if (part == "=")
+            {
+                signature += " = ";
+                continue;
+            }
+
+            if (part.StartsWith('(') || part == ")")
+            {
+                signature += part;
+                continue;
+            }
+
+            if (signature.EndsWith("operator") || signature.EndsWith(':') || signature.EndsWith("= "))
             {
                 signature += part;
                 continue;

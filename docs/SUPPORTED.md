@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 331
+- Passed: 335
 - Failed: 0
 - Skipped: 0
-- Total: 331
+- Total: 335
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -55,6 +55,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | functag | Supported | `AstPrinter`; `old_type` prints as `Tag:` without spaces around `:` |
 | funcenum | Supported | `AstPrinter`; members keep trailing commas; brace layout matches STYLE |
 | struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; trailing `;` |
+| enum | Supported | `AstPrinter`; named/anon, optional increment `(<<= n)`, trailing commas + `;` |
+| alias_declaration / alias_assignment | Supported | `AstPrinter`; `operator++` / `operator*` stay glued; legacy overloads kept on purpose |
 
 ## Unhandled / default path
 
