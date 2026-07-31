@@ -65,11 +65,6 @@ public sealed class AstPrinter
                 result = FormatVariableDeclaration(node, indentLevel);
                 return true;
             case "function_definition":
-                if (IsMisparsedFunctionDefinition(node))
-                {
-                    result = string.Empty;
-                    return false;
-                }
                 if (!TryFormatFunctionDefinition(node, indentLevel, out result))
                     return false;
                 return true;
@@ -178,28 +173,6 @@ public sealed class AstPrinter
         }
 
         return string.Join("", parts);
-    }
-
-    private static bool IsMisparsedFunctionDefinition(Node node)
-    {
-        string? nameText = null;
-        var hasParameters = false;
-        var hasExpressionStatement = false;
-
-        foreach (var child in node.Children)
-        {
-            if (child.Type == "identifier" && nameText == null)
-                nameText = child.Text;
-            else if (child.Type == "parameter_declarations")
-                hasParameters = true;
-            else if (child.Type == "expression_statement")
-                hasExpressionStatement = true;
-        }
-
-        if (nameText is "if" or "else" or "for" or "while" or "switch" or "do")
-            return true;
-
-        return hasParameters && hasExpressionStatement;
     }
 
     private bool TryFormatFunctionDefinition(Node node, int indentLevel, out string result)

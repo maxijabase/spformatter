@@ -162,7 +162,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 13. Retire function misparse fallbacks
 
-- Status: `Todo`
+- Status: `Done`
 - **STOP** if removing fallbacks breaks real plugin corpus or common goldens and the fix needs a grammar change
 - Otherwise remove `FormatControlStructureAsFunctionFallback` / `FormatFunctionCallAsFunctionFallback` once control structures and calls are Supported on clean trees
 - Commit

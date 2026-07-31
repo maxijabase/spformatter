@@ -29,7 +29,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | assignment | Supported | `AstPrinter` |
 | call expressions / args | Supported | `call_expression` and `call_arguments` both in `AstPrinter`; comma spacing via `LayoutRules.JoinComma` |
 | variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts` |
-| function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparsed control/call shapes still use legacy fallbacks |
+| function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed |
 | native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
 | if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; no brace injection |
 | for / while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing |
