@@ -1,181 +1,225 @@
 ﻿<Window x:Class="SpFormatter.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SpFormatter.UI"
         xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
-        mc:Ignorable="d"
-        Title="SourcePawn Formatter - Real-time Testing" Height="700" Width="1200"
-        MinHeight="600" MinWidth="900">
+        Title="SpFormatter"
+        Height="820" Width="1280"
+        MinHeight="640" MinWidth="980"
+        WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="#2D2D30" Padding="10">
+        <!-- Top chrome -->
+        <Border Grid.Row="0" Padding="18,14">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#FF141A22" Offset="0"/>
+                    <GradientStop Color="#FF1F2C3A" Offset="0.55"/>
+                    <GradientStop Color="#FF16362F" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="SourcePawn Formatter" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                <TextBlock x:Name="StatusText" Grid.Column="1" Text="Ready" Foreground="LightGray" VerticalAlignment="Center"/>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="SpFormatter" FontSize="22" FontWeight="Bold" Foreground="#FFF4F7FA"/>
+                    <TextBlock Text="SourcePawn parse · print · inspect"
+                               FontSize="12" Foreground="#FF9AABBC" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Open" Style="{StaticResource GhostButton}" Click="Open_Click" Margin="0,0,8,0"
+                            ToolTip="Ctrl+O"/>
+                    <Button Content="Save input" Style="{StaticResource GhostButton}" Click="Save_Click" Margin="0,0,8,0"
+                            ToolTip="Ctrl+S"/>
+                    <Button Content="Format" Style="{StaticResource AccentButton}" Click="FormatNow_Click" Margin="0,0,8,0"
+                            ToolTip="Ctrl+Enter"/>
+                    <ToggleButton x:Name="LiveFormatToggle" Content="Live"
+                                  Style="{StaticResource ChipToggle}"
+                                  IsChecked="True"
+                                  Checked="LiveFormat_Changed"
+                                  Unchecked="LiveFormat_Changed"
+                                  ToolTip="Refresh output while typing"
+                                  Margin="0,0,8,0"/>
+                    <ToggleButton x:Name="DarkEditorsToggle" Content="Dark editors"
+                                  Style="{StaticResource ChipToggle}"
+                                  IsChecked="True"
+                                  Checked="DarkEditors_Changed"
+                                  Unchecked="DarkEditors_Changed"
+                                  ToolTip="SPCode-style dark editor + syntax colors"/>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Main Content Area -->
-        <Grid Grid.Row="1" Margin="10">
+        <!-- Editors -->
+        <Grid Grid.Row="1" Margin="14,10,14,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*" MinWidth="280"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*" MinWidth="280"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Input Panel -->
-            <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <TextBlock Text="Source Code (Input)" FontWeight="Bold" Margin="0,0,0,5"/>
-                <avalonEdit:TextEditor x:Name="InputEditor" Grid.Row="1"
-                                     FontFamily="Consolas" FontSize="12"
-                                     Background="White" Foreground="Black"
-                                     ShowLineNumbers="True"
-                                     LineNumbersForeground="#666666"
-                                     WordWrap="False"/>
-            </Grid>
+            <Border Grid.Column="0" Background="{StaticResource BgPanelBrush}" CornerRadius="10" Padding="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Margin="12,10,12,8">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="Apply ←" Style="{StaticResource GhostButton}" Click="ApplyOutput_Click"
+                                    ToolTip="Replace input with formatted output (Ctrl+L)" Padding="10,5"/>
+                        </StackPanel>
+                        <TextBlock Text="INPUT" Style="{StaticResource PanelLabel}" VerticalAlignment="Center" Margin="0"/>
+                    </DockPanel>
+                    <Border Grid.Row="1" Margin="8,0,8,8" Background="{StaticResource BgEditorBrush}" CornerRadius="8" ClipToBounds="True">
+                        <avalonEdit:TextEditor x:Name="InputEditor"
+                                               FontFamily="{StaticResource CodeFont}"
+                                               FontSize="13"
+                                               ShowLineNumbers="True"
+                                               WordWrap="False"
+                                               HorizontalScrollBarVisibility="Auto"
+                                               VerticalScrollBarVisibility="Auto"/>
+                    </Border>
+                </Grid>
+            </Border>
 
-            <!-- Splitter -->
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="LightGray"/>
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch"
+                          Background="Transparent" ShowsPreview="True"/>
 
-            <!-- Output Panel -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <TextBlock Text="Formatted Code (Output)" FontWeight="Bold" Margin="0,0,0,5"/>
-                <avalonEdit:TextEditor x:Name="OutputEditor" Grid.Row="1"
-                                     FontFamily="Consolas" FontSize="12"
-                                     Background="White" Foreground="Black"
-                                     IsReadOnly="True"
-                                     ShowLineNumbers="True"
-                                     LineNumbersForeground="#666666"
-                                     WordWrap="False"/>
-            </Grid>
+            <Border Grid.Column="2" Background="{StaticResource BgPanelBrush}" CornerRadius="10" Padding="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Margin="12,10,12,6">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="Copy" Style="{StaticResource GhostButton}" Click="CopyOutput_Click"
+                                    ToolTip="Ctrl+Shift+C" Padding="10,5"/>
+                        </StackPanel>
+                        <TextBlock x:Name="OutputTitleText" Text="OUTPUT" Style="{StaticResource PanelLabel}"
+                                   VerticalAlignment="Center" Margin="0"/>
+                    </DockPanel>
+
+                    <Border Grid.Row="1" Background="#FF1B2430" CornerRadius="8" Margin="8,0,8,8" Padding="4">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="ModeFormattedToggle" Content="Formatted"
+                                          Style="{StaticResource ChipToggle}" IsChecked="True"
+                                          Checked="OutputMode_Checked" Unchecked="OutputMode_Unchecked" Margin="0,0,4,0"/>
+                            <ToggleButton x:Name="ModeAstToggle" Content="AST"
+                                          Style="{StaticResource ChipToggle}"
+                                          Checked="OutputMode_Checked" Unchecked="OutputMode_Unchecked" Margin="0,0,4,0"/>
+                            <ToggleButton x:Name="ModeErrorsToggle" Content="Errors"
+                                          Style="{StaticResource ChipToggle}"
+                                          Checked="OutputMode_Checked" Unchecked="OutputMode_Unchecked"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="2" Margin="8,0,8,8" Background="{StaticResource BgEditorBrush}" CornerRadius="8" ClipToBounds="True">
+                        <avalonEdit:TextEditor x:Name="OutputEditor"
+                                               FontFamily="{StaticResource CodeFont}"
+                                               FontSize="13"
+                                               IsReadOnly="True"
+                                               ShowLineNumbers="True"
+                                               WordWrap="False"
+                                               HorizontalScrollBarVisibility="Auto"
+                                               VerticalScrollBarVisibility="Auto"/>
+                    </Border>
+                </Grid>
+            </Border>
         </Grid>
 
-        <!-- Options Panel -->
-        <Border Grid.Row="2" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0">
-            <Expander Header="Formatting Options" IsExpanded="True" Margin="10">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
-                    <Grid Margin="10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- First Row: Core Options -->
-                        <Grid Grid.Row="0" Margin="0,0,0,20">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <!-- Indentation Options -->
-                            <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                                <TextBlock Text="Indentation" FontWeight="Bold" Margin="0,0,0,8"/>
-                                
-                                <Grid Margin="0,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Size:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBox x:Name="IndentSizeTextBox" Grid.Column="1" Text="4" Width="50" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
-                                </Grid>
-                                
-                                <CheckBox x:Name="UseSpacesCheckBox" Content="Use spaces (instead of tabs)" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                            </StackPanel>
-                            
-                            <!-- Spacing Options -->
-                            <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                                <TextBlock Text="Spacing" FontWeight="Bold" Margin="0,0,0,8"/>
-                                
-                                <CheckBox x:Name="SpaceAfterCommaCheckBox" Content="Space after comma" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="SpaceAroundOperatorsCheckBox" Content="Space around operators" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="SpaceBeforeOpenParenCheckBox" Content="Space before opening paren" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="SpaceInArrayBracketsCheckBox" Content="Space in array brackets" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                            </StackPanel>
-                            
-                            <!-- Line Break Options -->
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Line Breaks" FontWeight="Bold" Margin="0,0,0,8"/>
-                                
-                                <CheckBox x:Name="NewLineAfterOpenBraceCheckBox" Content="New line after opening brace" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="NewLineAfterIncludeCheckBox" Content="New line after include" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                
-                                <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Max line length:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox x:Name="MaxLineLengthTextBox" Grid.Column="1" Text="120" Width="60" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
-                                </Grid>
-                            </StackPanel>
-                        </Grid>
-                        
-                        <!-- Second Row: Advanced Options -->
-                        <Grid Grid.Row="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <!-- Empty Line Management -->
-                            <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                                <TextBlock Text="Empty Lines" FontWeight="Bold" Margin="0,0,0,8"/>
-                                
-                                <CheckBox x:Name="PreserveEmptyLinesCheckBox" Content="Preserve empty lines" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                
-                                <Grid Margin="0,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Max consecutive:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox x:Name="MaxConsecutiveEmptyLinesTextBox" Grid.Column="1" Text="2" Width="40" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
-                                </Grid>
-                            </StackPanel>
-                            
-                            <!-- SourcePawn Specific -->
-                            <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                                <TextBlock Text="SourcePawn Specific" FontWeight="Bold" Margin="0,0,0,8"/>
-                                
-                                <CheckBox x:Name="SortIncludesCheckBox" Content="Sort includes (opt-in)" IsChecked="False" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                <CheckBox x:Name="RequireSemicolonsCheckBox" Content="Require semicolons" IsChecked="True" Margin="0,3" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                                
-                                <Grid Margin="0,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Line ending:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <ComboBox x:Name="LineEndingComboBox" Grid.Column="1" Width="80" HorizontalAlignment="Left" SelectionChanged="OptionsChanged">
-                                        <ComboBoxItem Content="LF (\n)" IsSelected="True"/>
-                                        <ComboBoxItem Content="CRLF (\r\n)"/>
-                                    </ComboBox>
-                                </Grid>
-                            </StackPanel>
-                        </Grid>
+        <!-- Status strip -->
+        <Border Grid.Row="2" Background="{StaticResource BgDeepBrush}" Padding="14,8" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock x:Name="StatusText" DockPanel.Dock="Right"
+                           Text="Ready" Foreground="#FF8FA0B2" FontSize="11" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal">
+                    <Border x:Name="ParseChip" Style="{StaticResource StatusChip}">
+                        <TextBlock x:Name="ParseStatusText" Text="parse —" Foreground="#FFE8EEF5" FontSize="11"/>
+                    </Border>
+                    <Border x:Name="FormatChip" Style="{StaticResource StatusChip}">
+                        <TextBlock x:Name="FormatStatusText" Text="format —" Foreground="#FFE8EEF5" FontSize="11"/>
+                    </Border>
+                    <Border x:Name="ChangeChip" Style="{StaticResource StatusChip}">
+                        <TextBlock x:Name="ChangeStatusText" Text="diff —" Foreground="#FFE8EEF5" FontSize="11"/>
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Options -->
+        <Border Grid.Row="3" Background="{StaticResource BgPanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+            <Expander x:Name="OptionsExpander" Header="Options" IsExpanded="False" Margin="12,8" Foreground="#FFE8EEF5">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="260" Margin="0,10,0,4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="INDENT" Style="{StaticResource PanelLabel}"/>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="Size" Foreground="#FFB8C4D1" VerticalAlignment="Center" Width="70"/>
+                                <TextBox x:Name="IndentSizeTextBox" Style="{StaticResource OptionField}" Text="4" Width="56" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
+                            </DockPanel>
+                            <CheckBox x:Name="UseSpacesCheckBox" Style="{StaticResource OptionCheck}" Content="Use spaces" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <DockPanel Margin="0,4,0,0">
+                                <TextBlock Text="Line end" Foreground="#FFB8C4D1" VerticalAlignment="Center" Width="70"/>
+                                <ComboBox x:Name="LineEndingComboBox" Style="{StaticResource OptionCombo}" Width="100" HorizontalAlignment="Left" SelectionChanged="OptionsChanged">
+                                    <ComboBoxItem Content="LF" IsSelected="True"/>
+                                    <ComboBoxItem Content="CRLF"/>
+                                </ComboBox>
+                            </DockPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                            <TextBlock Text="SPACING" Style="{StaticResource PanelLabel}"/>
+                            <CheckBox x:Name="SpaceAfterCommaCheckBox" Style="{StaticResource OptionCheck}" Content="Space after comma" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="SpaceAroundOperatorsCheckBox" Style="{StaticResource OptionCheck}" Content="Space around operators" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="SpaceBeforeOpenParenCheckBox" Style="{StaticResource OptionCheck}" Content="Space before (" IsChecked="False" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="SpaceInArrayBracketsCheckBox" Style="{StaticResource OptionCheck}" Content="Space in [ ]" IsChecked="False" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Margin="0,0,16,0">
+                            <TextBlock Text="STRUCTURE" Style="{StaticResource PanelLabel}"/>
+                            <CheckBox x:Name="NewLineAfterOpenBraceCheckBox" Style="{StaticResource OptionCheck}" Content="Newline after {" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="NewLineAfterIncludeCheckBox" Style="{StaticResource OptionCheck}" Content="Blank after include" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="PreserveEmptyLinesCheckBox" Style="{StaticResource OptionCheck}" Content="Preserve empty lines" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="Max blanks" Foreground="#FFB8C4D1" VerticalAlignment="Center" Width="78"/>
+                                <TextBox x:Name="MaxConsecutiveEmptyLinesTextBox" Style="{StaticResource OptionField}" Text="2" Width="48" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
+                            </DockPanel>
+                            <DockPanel>
+                                <TextBlock Text="Max length" Foreground="#FFB8C4D1" VerticalAlignment="Center" Width="78"/>
+                                <TextBox x:Name="MaxLineLengthTextBox" Style="{StaticResource OptionField}" Text="120" Width="56" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
+                            </DockPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="3">
+                            <TextBlock Text="SOURCEPAWN" Style="{StaticResource PanelLabel}"/>
+                            <CheckBox x:Name="RequireSemicolonsCheckBox" Style="{StaticResource OptionCheck}" Content="Require semicolons" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="SortIncludesCheckBox" Style="{StaticResource OptionCheck}" Content="Sort includes" IsChecked="False" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="AllowSyntaxRecoveryCheckBox" Style="{StaticResource OptionCheck}" Content="Allow syntax recovery" IsChecked="False"
+                                      Checked="OptionsChanged" Unchecked="OptionsChanged"
+                                      ToolTip="Opt-in ERROR-tree / expression-wrapper recovery. Default is fail closed."/>
+                            <TextBlock TextWrapping="Wrap" Foreground="#FF8FA0B2" FontSize="11" Margin="0,8,0,0"
+                                       Text="AST and Errors modes inspect the tree-sitter parse without changing the printer path."/>
+                        </StackPanel>
                     </Grid>
                 </ScrollViewer>
             </Expander>

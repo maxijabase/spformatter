@@ -1,316 +1,165 @@
 ﻿using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
-using System.Xml;
-using ICSharpCode.AvalonEdit;
+using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Highlighting;
-using ICSharpCode.AvalonEdit.Highlighting.Xshd;
+using Microsoft.Win32;
 
 namespace SpFormatter.UI;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
-    private SourcePawnFormatter? _formatter;
-    private readonly DispatcherTimer? _formatTimer;
-    private bool _updating = false;
-    private CancellationTokenSource? _formatCancellationTokenSource;
+    private enum OutputMode
+    {
+        Formatted,
+        Ast,
+        Errors
+    }
+
+    private readonly DispatcherTimer _debounceTimer;
+    private CancellationTokenSource? _refreshCts;
     private IHighlightingDefinition? _sourcePawnHighlighting;
+    private bool _updating;
+    private bool _ready;
+    private string? _currentPath;
+    private string _lastFormattedText = string.Empty;
 
     public MainWindow()
     {
-        try
+        InitializeComponent();
+
+        _debounceTimer = new DispatcherTimer
         {
-            _updating = true;
-            InitializeComponent();
-            
-            // Initialize timer for delayed formatting (to avoid formatting on every keystroke)
-            _formatTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(500) // 500ms delay after user stops typing
-            };
-            _formatTimer.Tick += FormatTimer_Tick;
-            
-            Loaded += MainWindow_Loaded;
-            _updating = false;
-        }
-        catch (Exception ex)
+            Interval = TimeSpan.FromMilliseconds(280)
+        };
+        _debounceTimer.Tick += (_, _) =>
         {
-            MessageBox.Show($"Constructor error: {ex.Message}\n\nStack trace:\n{ex.StackTrace}", "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+            _debounceTimer.Stop();
+            _ = RefreshOutputAsync(force: true);
+        };
+
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
+        Loaded += MainWindow_Loaded;
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         try
         {
-            UpdateStatus("Initializing SourcePawn formatter...");
-            
-            // Step 1: Set up basic text editors
-            SetupBasicTextEditors();
-            
-            // Step 2: Skip syntax highlighting for now to ensure app works
-            UpdateStatus("Syntax highlighting temporarily disabled");
-            
-            // Step 3: Load default content
+            ConfigureEditors();
+            TryLoadSyntaxHighlighting();
             await LoadDefaultInputAsync();
-            
-            // Step 4: Initialize formatter
-            var options = GetFormattingOptionsFromUI();
-            _formatter = new SourcePawnFormatter(options);
-            
-            // Step 5: Enable real-time formatting
-            InputEditor.TextChanged += InputEditor_TextChanged;
-            
-            UpdateStatus("Ready - SourcePawn Formatter");
-            
-            // Step 6: Initial formatting
-            await FormatCodeAsync();
-            
+            _ready = true;
+            await RefreshOutputAsync(force: true);
+            UpdateStatus("Ready");
         }
         catch (Exception ex)
         {
-            UpdateStatus($"Initialization error: {ex.Message}");
-            MessageBox.Show($"Initialization error: {ex.Message}\n\nStack trace:\n{ex.StackTrace}", "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            UpdateStatus($"Init failed: {ex.Message}");
+            MessageBox.Show(this, ex.Message, "SpFormatter", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void ConfigureEditors()
+    {
+        foreach (var editor in new[] { InputEditor, OutputEditor })
+        {
+            editor.Options.EnableHyperlinks = false;
+            editor.Options.EnableEmailHyperlinks = false;
+            editor.Options.AllowScrollBelowDocument = true;
+            editor.ShowLineNumbers = true;
+            editor.WordWrap = false;
+        }
+
+        InputEditor.TextChanged += InputEditor_TextChanged;
+        ApplyEditorTheme(DarkEditorsToggle.IsChecked == true);
     }
 
     private void TryLoadSyntaxHighlighting()
     {
         try
         {
-            // Try to load from embedded resource first
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            var resourceName = "SpFormatter.UI.SourcePawn.xshd";
-            
-            using var stream = assembly.GetManifestResourceStream(resourceName);
-            if (stream != null)
-            {
-                using var reader = new XmlTextReader(stream);
-                _sourcePawnHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-                
-                if (_sourcePawnHighlighting != null)
-                {
-                    HighlightingManager.Instance.RegisterHighlighting("SourcePawn", new[] { ".sp", ".inc" }, _sourcePawnHighlighting);
-                    ApplySyntaxHighlighting();
-                    UpdateStatus("SourcePawn syntax highlighting loaded successfully");
-                    return;
-                }
-            }
-            
-            // Fallback to WPF resource
-            var resourceUri = new Uri("pack://application:,,,/SourcePawn.xshd");
-            var streamInfo = Application.GetResourceStream(resourceUri);
-            
-            if (streamInfo?.Stream != null)
-            {
-                using var reader = new XmlTextReader(streamInfo.Stream);
-                _sourcePawnHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-                
-                if (_sourcePawnHighlighting != null)
-                {
-                    HighlightingManager.Instance.RegisterHighlighting("SourcePawn", new[] { ".sp", ".inc" }, _sourcePawnHighlighting);
-                    ApplySyntaxHighlighting();
-                    UpdateStatus("SourcePawn syntax highlighting loaded successfully (WPF resource)");
-                    return;
-                }
-            }
-            
-            UpdateStatus("SourcePawn syntax highlighting not available - using plain text");
+            _sourcePawnHighlighting = DarkEditorsToggle.IsChecked == true
+                ? SourcePawnHighlighting.CreateDark()
+                : SourcePawnHighlighting.CreateLight();
+
+            // Validate so a bad rule fails here instead of crashing layout.
+            var probeDoc = new TextDocument("#include <sourcemod>\nvoid t() { PrintToServer(\"hi\"); }\n");
+            var probeHighlighter = new DocumentHighlighter(probeDoc, _sourcePawnHighlighting);
+            _ = probeHighlighter.HighlightLine(1);
+            _ = probeHighlighter.HighlightLine(2);
+
+            HighlightingManager.Instance.RegisterHighlighting("SourcePawn", [".sp", ".inc"], _sourcePawnHighlighting);
+            ApplySourceHighlightingToEditors();
         }
         catch (Exception ex)
         {
-            UpdateStatus($"Syntax highlighting disabled: {ex.Message}");
-            // Continue without syntax highlighting - don't crash the app
+            _sourcePawnHighlighting = null;
+            InputEditor.SyntaxHighlighting = null;
+            OutputEditor.SyntaxHighlighting = null;
+            UpdateStatus($"Highlighting disabled: {ex.Message}");
         }
     }
 
-    private void ApplySyntaxHighlighting()
+    private void ApplyEditorTheme(bool dark)
     {
-        if (_sourcePawnHighlighting != null)
+        var background = (Brush)FindResource(dark ? "BgEditorDarkBrush" : "BgEditorBrush");
+        var foreground = (Brush)FindResource(dark ? "InkDarkBrush" : "InkBrush");
+        var lineNumbers = (Brush)FindResource(dark ? "MutedDarkBrush" : "MutedBrush");
+
+        foreach (var editor in new[] { InputEditor, OutputEditor })
         {
-            InputEditor.SyntaxHighlighting = _sourcePawnHighlighting;
-            OutputEditor.SyntaxHighlighting = _sourcePawnHighlighting;
+            editor.Background = background;
+            editor.Foreground = foreground;
+            editor.LineNumbersForeground = lineNumbers;
+            editor.TextArea.SelectionBrush = new SolidColorBrush(Color.FromArgb(0x66, 0x26, 0x4F, 0x78));
+            editor.TextArea.SelectionForeground = null;
+            editor.TextArea.SelectionBorder = null;
         }
     }
 
-    private void LoadSyntaxHighlighting()
+    private void ApplySourceHighlightingToEditors()
     {
-        try
-        {
-            // Try to load the WPF resource
-            var resourceUri = new Uri("pack://application:,,,/SourcePawn.xshd");
-            var streamInfo = Application.GetResourceStream(resourceUri);
-            
-            if (streamInfo?.Stream == null)
-            {
-                UpdateStatus("SourcePawn.xshd resource not found - using default highlighting");
-                return;
-            }
-
-            using var reader = new XmlTextReader(streamInfo.Stream);
-            _sourcePawnHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-            
-            if (_sourcePawnHighlighting != null)
-            {
-                HighlightingManager.Instance.RegisterHighlighting("SourcePawn", new[] { ".sp", ".inc" }, _sourcePawnHighlighting);
-                UpdateStatus("SourcePawn syntax highlighting loaded successfully");
-            }
-            else
-            {
-                UpdateStatus("Failed to create highlighting definition from XSHD");
-            }
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"Could not load syntax highlighting: {ex.Message}");
-            // Don't show message box - just log and continue without syntax highlighting
-        }
+        var mode = GetSelectedOutputMode();
+        InputEditor.SyntaxHighlighting = _sourcePawnHighlighting;
+        OutputEditor.SyntaxHighlighting = mode == OutputMode.Formatted ? _sourcePawnHighlighting : null;
     }
 
-    private void SetupTextEditors()
+    private void DarkEditors_Changed(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            // Set up input editor
-            InputEditor.SyntaxHighlighting = _sourcePawnHighlighting;
-            InputEditor.Options.EnableHyperlinks = false;
-            InputEditor.Options.EnableEmailHyperlinks = false;
-            InputEditor.TextChanged += InputEditor_TextChanged;
-            
-            // Set up output editor
-            OutputEditor.SyntaxHighlighting = _sourcePawnHighlighting;
-            OutputEditor.Options.EnableHyperlinks = false;
-            OutputEditor.Options.EnableEmailHyperlinks = false;
-            OutputEditor.Text = "Formatted code will appear here...";
-            
-            UpdateStatus("Text editors setup completed");
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"Text editor setup error: {ex.Message}");
-            MessageBox.Show($"Text editor setup error: {ex.Message}\n\nStack trace:\n{ex.StackTrace}", "Editor Setup Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
+        if (!_ready)
+            return;
 
-    private void SetupTextEditorsWithHighlighting()
-    {
-        try
-        {
-            // Basic options
-            InputEditor.Options.EnableHyperlinks = false;
-            InputEditor.Options.EnableEmailHyperlinks = false;
-            InputEditor.TextChanged += InputEditor_TextChanged;
-            
-            OutputEditor.Options.EnableHyperlinks = false;
-            OutputEditor.Options.EnableEmailHyperlinks = false;
-            
-            // Apply syntax highlighting if available
-            if (_sourcePawnHighlighting != null)
-            {
-                InputEditor.SyntaxHighlighting = _sourcePawnHighlighting;
-                OutputEditor.SyntaxHighlighting = _sourcePawnHighlighting;
-                UpdateStatus("Text editors setup completed with SourcePawn syntax highlighting");
-            }
-            else
-            {
-                UpdateStatus("Text editors setup completed (no syntax highlighting)");
-            }
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"Text editor setup error: {ex.Message}");
-            // Continue without syntax highlighting if there's an error
-        }
-    }
-
-    private void SetupBasicTextEditors()
-    {
-        try
-        {
-            // Set up input editor
-            InputEditor.Options.EnableHyperlinks = false;
-            InputEditor.Options.EnableEmailHyperlinks = false;
-            InputEditor.ShowLineNumbers = true;
-            InputEditor.WordWrap = false;
-            
-            // Set up output editor
-            OutputEditor.Options.EnableHyperlinks = false;
-            OutputEditor.Options.EnableEmailHyperlinks = false;
-            OutputEditor.IsReadOnly = true;
-            OutputEditor.ShowLineNumbers = true;
-            OutputEditor.WordWrap = false;
-            
-            UpdateStatus("Text editors configured");
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"Text editor setup error: {ex.Message}");
-            throw; // Re-throw to be caught by the caller
-        }
-    }
-
-    private void SetupTextEditorsBasic()
-    {
-        try
-        {
-            // Set up editors without syntax highlighting
-            InputEditor.Options.EnableHyperlinks = false;
-            InputEditor.Options.EnableEmailHyperlinks = false;
-            InputEditor.TextChanged += InputEditor_TextChanged;
-            
-            OutputEditor.Options.EnableHyperlinks = false;
-            OutputEditor.Options.EnableEmailHyperlinks = false;
-            
-            UpdateStatus("Text editors setup completed (no syntax highlighting)");
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"Text editor setup error: {ex.Message}");
-            MessageBox.Show($"Text editor setup error: {ex.Message}\n\nStack trace:\n{ex.StackTrace}", "Editor Setup Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        ApplyEditorTheme(DarkEditorsToggle.IsChecked == true);
+        TryLoadSyntaxHighlighting();
+        _ = RefreshOutputAsync(force: true);
     }
 
     private async Task LoadDefaultInputAsync()
     {
+        var testFilePath = Path.Combine(AppContext.BaseDirectory, "input.sp");
+        if (!File.Exists(testFilePath))
+            return;
+
+        var content = await File.ReadAllTextAsync(testFilePath);
+        _updating = true;
         try
         {
-            var testFilePath = "input.sp";
-            if (File.Exists(testFilePath))
-            {
-                var content = await File.ReadAllTextAsync(testFilePath);
-                _updating = true;
-                try
-                {
-                    InputEditor.Text = content;
-                }
-                finally
-                {
-                    _updating = false;
-                }
-            }
+            InputEditor.Text = content;
+            _currentPath = testFilePath;
         }
-        catch (Exception ex)
+        finally
         {
-            UpdateStatus($"Could not load test file: {ex.Message}");
-            // Keep the default simple content if file loading fails
+            _updating = false;
         }
     }
 
-    private FormattingOptions GetFormattingOptionsFromUI()
-    {
-        return new FormattingOptions
+    private FormattingOptions GetFormattingOptionsFromUI() =>
+        new()
         {
             IndentSize = int.TryParse(IndentSizeTextBox.Text, out var size) ? size : 4,
             UseSpaces = UseSpacesCheckBox.IsChecked == true,
@@ -322,108 +171,297 @@ public partial class MainWindow : Window
             NewLineAfterInclude = NewLineAfterIncludeCheckBox.IsChecked == true,
             MaxLineLength = int.TryParse(MaxLineLengthTextBox.Text, out var length) ? length : 120,
             PreserveEmptyLines = PreserveEmptyLinesCheckBox.IsChecked == true,
-            MaxConsecutiveEmptyLines = int.TryParse(MaxConsecutiveEmptyLinesTextBox.Text, out var maxEmptyLines) ? maxEmptyLines : 2,
+            MaxConsecutiveEmptyLines = int.TryParse(MaxConsecutiveEmptyLinesTextBox.Text, out var maxEmptyLines)
+                ? maxEmptyLines
+                : 2,
             SortIncludes = SortIncludesCheckBox.IsChecked == true,
             RequireSemicolons = RequireSemicolonsCheckBox.IsChecked == true,
-            LineEnding = GetSelectedLineEnding()
+            AllowSyntaxRecovery = AllowSyntaxRecoveryCheckBox.IsChecked == true,
+            LineEnding = LineEndingComboBox.SelectedIndex == 1 ? "\r\n" : "\n"
         };
-    }
-    
-    private string GetSelectedLineEnding()
+
+    private OutputMode GetSelectedOutputMode()
     {
-        if (LineEndingComboBox.SelectedIndex == 1) // CRLF
-            return "\r\n";
-        return "\n"; // LF (default)
+        if (ModeAstToggle.IsChecked == true)
+            return OutputMode.Ast;
+        if (ModeErrorsToggle.IsChecked == true)
+            return OutputMode.Errors;
+        return OutputMode.Formatted;
     }
 
     private void InputEditor_TextChanged(object? sender, EventArgs e)
     {
-        if (_updating) return;
-        
-        // Format immediately on every keystroke
-        _formatTimer?.Stop();
-        _ = FormatCodeAsync();
+        if (_updating || !_ready)
+            return;
+
+        if (LiveFormatToggle.IsChecked != true)
+        {
+            UpdateStatus("Live off · press Format");
+            return;
+        }
+
+        _debounceTimer.Stop();
+        _debounceTimer.Start();
+        UpdateStatus("Typing…");
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-        if (_updating) return;
-        
-        try
+        if (_updating || !_ready)
+            return;
+
+        if (LiveFormatToggle.IsChecked == true)
         {
-            // Recreate formatter with new options
-            _formatter?.Dispose();
-            var options = GetFormattingOptionsFromUI();
-            _formatter = new SourcePawnFormatter(options);
-            
-            // Trigger immediate formatting when options change
-            _formatTimer?.Stop();
-            _ = FormatCodeAsync();
+            _debounceTimer.Stop();
+            _ = RefreshOutputAsync(force: true);
         }
-        catch (Exception ex)
+        else
         {
-            UpdateStatus($"Options error: {ex.Message}");
+            UpdateStatus("Options changed · press Format");
         }
     }
 
-    private void FormatTimer_Tick(object? sender, EventArgs e)
+    private void LiveFormat_Changed(object sender, RoutedEventArgs e)
     {
-        _formatTimer?.Stop();
-        _ = FormatCodeAsync();
+        if (!_ready)
+            return;
+
+        if (LiveFormatToggle.IsChecked == true)
+            _ = RefreshOutputAsync(force: true);
+        else
+            UpdateStatus("Live off · press Format");
     }
 
-    private async Task FormatCodeAsync()
+    private void OutputMode_Checked(object sender, RoutedEventArgs e)
     {
-        if (_formatter == null || _updating) return;
+        if (!_ready || _updating || sender is not ToggleButton checkedButton || checkedButton.IsChecked != true)
+            return;
 
-        // Cancel any existing formatting operation
-        _formatCancellationTokenSource?.Cancel();
-        _formatCancellationTokenSource = new CancellationTokenSource();
-        var cancellationToken = _formatCancellationTokenSource.Token;
+        _updating = true;
+        try
+        {
+            ModeFormattedToggle.IsChecked = ReferenceEquals(checkedButton, ModeFormattedToggle);
+            ModeAstToggle.IsChecked = ReferenceEquals(checkedButton, ModeAstToggle);
+            ModeErrorsToggle.IsChecked = ReferenceEquals(checkedButton, ModeErrorsToggle);
+        }
+        finally
+        {
+            _updating = false;
+        }
+
+        _ = RefreshOutputAsync(force: true);
+    }
+
+    private void OutputMode_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating)
+            return;
+
+        if (ModeFormattedToggle.IsChecked == true
+            || ModeAstToggle.IsChecked == true
+            || ModeErrorsToggle.IsChecked == true)
+        {
+            return;
+        }
+
+        _updating = true;
+        try
+        {
+            if (sender is ToggleButton button)
+                button.IsChecked = true;
+        }
+        finally
+        {
+            _updating = false;
+        }
+    }
+
+    private void FormatNow_Click(object sender, RoutedEventArgs e) => _ = RefreshOutputAsync(force: true);
+
+    private void ApplyOutput_Click(object sender, RoutedEventArgs e) => ApplyFormattedToInput();
+
+    private void CopyOutput_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(OutputEditor.Text))
+            return;
+
+        Clipboard.SetText(OutputEditor.Text);
+        UpdateStatus("Copied output");
+    }
+
+    private async void Open_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "SourcePawn (*.sp;*.inc)|*.sp;*.inc|All files (*.*)|*.*",
+            Title = "Open SourcePawn file"
+        };
+
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        var text = await File.ReadAllTextAsync(dialog.FileName);
+        _updating = true;
+        try
+        {
+            InputEditor.Text = text;
+            _currentPath = dialog.FileName;
+        }
+        finally
+        {
+            _updating = false;
+        }
+
+        Title = $"SpFormatter · {Path.GetFileName(dialog.FileName)}";
+        await RefreshOutputAsync(force: true);
+    }
+
+    private async void Save_Click(object sender, RoutedEventArgs e)
+    {
+        var path = _currentPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "SourcePawn (*.sp)|*.sp|Include (*.inc)|*.inc|All files (*.*)|*.*",
+                Title = "Save input",
+                FileName = Path.GetFileName(path) ?? "untitled.sp"
+            };
+            if (dialog.ShowDialog(this) != true)
+                return;
+            path = dialog.FileName;
+            _currentPath = path;
+        }
+
+        await File.WriteAllTextAsync(path, InputEditor.Text);
+        Title = $"SpFormatter · {Path.GetFileName(path)}";
+        UpdateStatus("Saved input");
+    }
+
+    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Enter)
+        {
+            _ = RefreshOutputAsync(force: true);
+            e.Handled = true;
+        }
+        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.O)
+        {
+            Open_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
+        {
+            Save_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.C)
+        {
+            CopyOutput_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.L)
+        {
+            ApplyFormattedToInput();
+            e.Handled = true;
+        }
+    }
+
+    private void ApplyFormattedToInput()
+    {
+        if (GetSelectedOutputMode() != OutputMode.Formatted || string.IsNullOrEmpty(_lastFormattedText))
+        {
+            UpdateStatus("Apply needs a successful Formatted result");
+            return;
+        }
+
+        _updating = true;
+        try
+        {
+            InputEditor.Text = _lastFormattedText;
+        }
+        finally
+        {
+            _updating = false;
+        }
+
+        _ = RefreshOutputAsync(force: true);
+        UpdateStatus("Applied formatted output to input");
+    }
+
+    private async Task RefreshOutputAsync(bool force)
+    {
+        if (!_ready || _updating)
+            return;
+
+        if (!force && LiveFormatToggle.IsChecked != true)
+            return;
+
+        _refreshCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+        var token = _refreshCts.Token;
+        var mode = GetSelectedOutputMode();
+        var inputText = InputEditor.Text;
 
         try
         {
-            var inputText = InputEditor.Text;
-            
             if (string.IsNullOrWhiteSpace(inputText))
             {
                 OutputEditor.Text = string.Empty;
+                _lastFormattedText = string.Empty;
+                SetChip(ParseChip, ParseStatusText, "parse —", "MutedBrush");
+                SetChip(FormatChip, FormatStatusText, "format —", "MutedBrush");
+                SetChip(ChangeChip, ChangeStatusText, "diff —", "MutedBrush");
+                OutputTitleText.Text = "OUTPUT";
                 UpdateStatus("Ready");
                 return;
             }
 
-            UpdateStatus("Formatting...");
-            
-            // Run formatting on background thread to avoid blocking UI
-            var formattedCode = await Task.Run(() => 
+            UpdateStatus(mode switch
             {
-                // Check for cancellation before expensive operation
-                cancellationToken.ThrowIfCancellationRequested();
-                
-                try
-                {
-                    return _formatter.Format(inputText);
-                }
-                catch (FormatException ex)
-                {
-                    // Show detailed syntax error information
-                    return $"=== FORMATTING ERROR ===\n{ex.Message}\n\n=== ORIGINAL CODE ===\n{inputText}";
-                }
-                catch (Exception ex)
-                {
-                    return $"=== UNEXPECTED ERROR ===\n{ex.GetType().Name}: {ex.Message}\n\n=== ORIGINAL CODE ===\n{inputText}";
-                }
-            }, cancellationToken);
+                OutputMode.Ast => "Parsing…",
+                OutputMode.Errors => "Collecting errors…",
+                _ => "Formatting…"
+            });
 
-            // Check for cancellation before updating UI
-            cancellationToken.ThrowIfCancellationRequested();
+            var options = GetFormattingOptionsFromUI();
+            var snapshot = await Task.Run(() => BuildOutputSnapshot(inputText, mode, options), token);
+            token.ThrowIfCancellationRequested();
 
-            // Update UI on main thread
             _updating = true;
             try
             {
-                OutputEditor.Text = formattedCode;
-                UpdateStatus("Ready");
+                OutputEditor.Text = snapshot.Text;
+                if (mode == OutputMode.Formatted && snapshot.FormatSucceeded)
+                    _lastFormattedText = snapshot.FormattedText;
+                else if (mode == OutputMode.Formatted)
+                    _lastFormattedText = string.Empty;
+
+                OutputTitleText.Text = mode switch
+                {
+                    OutputMode.Ast => "AST",
+                    OutputMode.Errors => "ERRORS",
+                    _ => "OUTPUT"
+                };
+
+                SetChip(
+                    ParseChip,
+                    ParseStatusText,
+                    snapshot.ParseStatus,
+                    snapshot.HasErrors ? "ErrBrush" : "OkBrush");
+                SetChip(
+                    FormatChip,
+                    FormatStatusText,
+                    snapshot.FormatStatus,
+                    snapshot.FormatSucceeded ? "OkBrush" : "ErrBrush");
+                SetChip(
+                    ChangeChip,
+                    ChangeStatusText,
+                    snapshot.ChangeStatus,
+                    snapshot.ChangeBrushKey);
+
+                ApplySourceHighlightingToEditors();
+                UpdateStatus(snapshot.Status);
             }
             finally
             {
@@ -432,27 +470,138 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            // Formatting was cancelled - this is normal during rapid typing
-            return;
         }
         catch (Exception ex)
         {
             UpdateStatus($"Error: {ex.Message}");
             OutputEditor.Text = $"Unexpected error:\n{ex.Message}";
+            SetChip(FormatChip, FormatStatusText, "format error", "ErrBrush");
         }
     }
 
-    private void UpdateStatus(string message)
+    private void SetChip(Border chip, TextBlock label, string text, string brushKey)
     {
-        StatusText.Text = $"{DateTime.Now:HH:mm:ss} - {message}";
+        label.Text = text;
+        label.Foreground = (Brush)FindResource(brushKey);
+        chip.Opacity = 1;
     }
+
+    private static OutputSnapshot BuildOutputSnapshot(
+        string inputText,
+        OutputMode mode,
+        FormattingOptions options)
+    {
+        using var parser = new SourcePawnParser();
+        using var tree = parser.ParseSource(inputText);
+        var errors = parser.GetSyntaxErrors(inputText);
+        var hasErrors = tree?.RootNode?.HasError == true || errors.Count > 0;
+        var parseStatus = hasErrors
+            ? $"parse {Math.Max(errors.Count, 1)} err"
+            : "parse ok";
+
+        return mode switch
+        {
+            OutputMode.Ast => new OutputSnapshot(
+                Text: tree?.RootNode == null
+                    ? "(no parse tree)"
+                    : AstInspector.FormatTreeStructure(tree.RootNode),
+                FormattedText: string.Empty,
+                ParseStatus: parseStatus,
+                FormatStatus: "format —",
+                FormatSucceeded: false,
+                ChangeStatus: "diff —",
+                ChangeBrushKey: "MutedBrush",
+                HasErrors: hasErrors,
+                Status: hasErrors ? "AST ready (errors)" : "AST ready"),
+            OutputMode.Errors => new OutputSnapshot(
+                Text: FormatErrors(errors, hasErrors),
+                FormattedText: string.Empty,
+                ParseStatus: parseStatus,
+                FormatStatus: "format —",
+                FormatSucceeded: false,
+                ChangeStatus: "diff —",
+                ChangeBrushKey: "MutedBrush",
+                HasErrors: hasErrors,
+                Status: hasErrors ? $"{errors.Count} syntax error(s)" : "No syntax errors"),
+            _ => FormatFormattedSnapshot(inputText, options, parseStatus, hasErrors)
+        };
+    }
+
+    private static OutputSnapshot FormatFormattedSnapshot(
+        string inputText,
+        FormattingOptions options,
+        string parseStatus,
+        bool hasErrors)
+    {
+        using var formatter = new SourcePawnFormatter(options);
+        var result = formatter.FormatWithResult(inputText);
+        if (!result.Success)
+        {
+            var details = result.Errors.Count == 0
+                ? "Formatting failed."
+                : string.Join("\n\n", result.Errors.Select(e => e.GetDetailedDescription()));
+            return new OutputSnapshot(
+                Text: $"=== FORMATTING FAILED (fail closed) ===\n{details}",
+                FormattedText: string.Empty,
+                ParseStatus: parseStatus,
+                FormatStatus: "format blocked",
+                FormatSucceeded: false,
+                ChangeStatus: "diff —",
+                ChangeBrushKey: "MutedBrush",
+                HasErrors: true,
+                Status: "Format blocked by syntax errors");
+        }
+
+        var normalizedInput = NormalizeForCompare(inputText, options.LineEnding);
+        var normalizedOutput = NormalizeForCompare(result.Text, options.LineEnding);
+        var changed = !string.Equals(normalizedInput, normalizedOutput, StringComparison.Ordinal);
+
+        return new OutputSnapshot(
+            Text: result.Text,
+            FormattedText: result.Text,
+            ParseStatus: parseStatus,
+            FormatStatus: "format ok",
+            FormatSucceeded: true,
+            ChangeStatus: changed ? "would change" : "unchanged",
+            ChangeBrushKey: changed ? "WarnBrush" : "OkBrush",
+            HasErrors: hasErrors,
+            Status: changed ? "Formatted · differs from input" : "Formatted · already clean");
+    }
+
+    private static string NormalizeForCompare(string text, string _) =>
+        text.Replace("\r\n", "\n").Replace('\r', '\n').TrimEnd();
+
+    private static string FormatErrors(IReadOnlyList<SyntaxError> errors, bool hasErrors)
+    {
+        if (errors.Count == 0)
+        {
+            return hasErrors
+                ? "Root HasError is true, but no detailed ERROR/MISSING nodes were collected."
+                : "No syntax errors.";
+        }
+
+        return string.Join("\n\n", errors.Select((e, i) => $"[{i + 1}] {e.GetDetailedDescription()}"));
+    }
+
+    private void UpdateStatus(string message) =>
+        StatusText.Text = $"{DateTime.Now:HH:mm:ss} · {message}";
 
     protected override void OnClosed(EventArgs e)
     {
-        _formatTimer?.Stop();
-        _formatCancellationTokenSource?.Cancel();
-        _formatCancellationTokenSource?.Dispose();
-        _formatter?.Dispose();
+        _debounceTimer.Stop();
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
         base.OnClosed(e);
     }
+
+    private sealed record OutputSnapshot(
+        string Text,
+        string FormattedText,
+        string ParseStatus,
+        string FormatStatus,
+        bool FormatSucceeded,
+        string ChangeStatus,
+        string ChangeBrushKey,
+        bool HasErrors,
+        string Status);
 }
