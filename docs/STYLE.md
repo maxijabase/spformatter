@@ -38,7 +38,8 @@ Product defaults for formatted SourcePawn. Goldens must follow this file, not ad
 
 ## Blank lines
 
-- preserve empty lines with a small cap (`MaxConsecutiveEmptyLines`, default 2) once that path is trustworthy
+- preserve author blank lines between siblings from original source gaps
+- cap with `MaxConsecutiveEmptyLines` (default 2); disable with `PreserveEmptyLines = false`
 
 ## Deferred (not options yet)
 

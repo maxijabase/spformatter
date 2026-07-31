@@ -1,5 +1,6 @@
 new Float:b = 0.23;
 Handle:x;
+
 void Foo()
 {
     new Float:b = 0.23;

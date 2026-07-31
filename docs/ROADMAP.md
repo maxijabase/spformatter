@@ -239,6 +239,12 @@ Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chu
 - Fixed `char_literal` spacing (`'\0'`) and if trailing comments stolen as the then-body
 - Blank-line collapse inside includes remains Partial (AST does not retain intra-block blanks)
 
+### Step 24. Preserve author blank lines from source gaps
+
+- Status: `Done`
+- Restore capped blank lines between siblings using original byte gaps (`PreserveEmptyLines` / `MaxConsecutiveEmptyLines`)
+- Covers source_file, blocks, and braced member lists (enum/methodmap/struct/…)
+
 ## Deferred forever unless product asks
 
 Do not schedule these unless the user explicitly expands scope:

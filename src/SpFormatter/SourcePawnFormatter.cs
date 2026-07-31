@@ -51,6 +51,8 @@ public class SourcePawnFormatter : IDisposable
         if (tree?.RootNode == null)
             return FormatResult.Fail("Unable to parse source code");
 
+        _astPrinter.BeginDocument(sourceCode);
+
         if (tree.RootNode.HasError)
         {
             if (!_options.AllowSyntaxRecovery)

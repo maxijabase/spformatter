@@ -11,12 +11,18 @@ public sealed class AstPrinter
 {
     private readonly LayoutRules _layout;
     private readonly Func<Node, int, string> _formatChild;
+    private string _source = "";
 
     public AstPrinter(LayoutRules layout, Func<Node, int, string> formatChild)
     {
         _layout = layout;
         _formatChild = formatChild;
     }
+
+    /// <summary>
+    /// Bind the original document text so sibling printers can restore blank lines from source gaps.
+    /// </summary>
+    public void BeginDocument(string source) => _source = source ?? "";
 
     public bool TryPrint(Node node, int indentLevel, out string result)
     {
@@ -383,10 +389,7 @@ public sealed class AstPrinter
 
     private string FormatBlock(Node node, int indentLevel)
     {
-        var result = new List<string>
-        {
-            _layout.Indent(indentLevel) + "{"
-        };
+        var siblings = new List<(Node Node, string Text)>();
 
         foreach (var child in node.Children)
         {
@@ -412,11 +415,13 @@ public sealed class AstPrinter
                 formatted = formatted.TrimEnd() + ";";
             }
 
-            result.Add(formatted);
+            siblings.Add((child, formatted));
         }
 
-        result.Add(_layout.Indent(indentLevel) + "}");
-        return string.Join(_layout.Options.LineEnding, result);
+        var lines = new List<string> { _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(JoinSiblingChunks(siblings));
+        lines.Add(_layout.Indent(indentLevel) + "}");
+        return string.Join(_layout.Options.LineEnding, lines);
     }
 
     private string FormatBlockCompact(Node node)
@@ -892,7 +897,7 @@ public sealed class AstPrinter
     private string FormatMethodmap(Node node, int indentLevel)
     {
         var header = BuildMethodmapHeader(node, indentLevel);
-        var members = new List<string>();
+        var members = new List<(Node Node, string Text)>();
         var inBody = false;
 
         foreach (var child in node.Children)
@@ -914,19 +919,19 @@ public sealed class AstPrinter
                         break;
                     var member = _formatChild(child, indentLevel + 1);
                     if (!string.IsNullOrWhiteSpace(member))
-                        members.Add(member);
+                        members.Add((child, member));
                     break;
             }
         }
 
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            var inner = string.Join(" ", members.Select(m => m.Text.Trim()));
             return header + " { " + inner + " };";
         }
 
         var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
-        lines.AddRange(members);
+        lines.AddRange(JoinSiblingChunks(members));
         lines.Add(_layout.Indent(indentLevel) + "};");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1030,7 +1035,7 @@ public sealed class AstPrinter
     private string FormatMethodmapProperty(Node node, int indentLevel)
     {
         var headerParts = new List<string>();
-        var accessors = new List<string>();
+        var accessors = new List<(Node Node, string Text)>();
         var inBody = false;
 
         foreach (var child in node.Children)
@@ -1054,7 +1059,7 @@ public sealed class AstPrinter
                     {
                         var accessor = _formatChild(child, indentLevel + 1);
                         if (!string.IsNullOrWhiteSpace(accessor))
-                            accessors.Add(accessor);
+                            accessors.Add((child, accessor));
                     }
 
                     break;
@@ -1064,12 +1069,12 @@ public sealed class AstPrinter
         var header = _layout.Indent(indentLevel) + string.Join(" ", headerParts);
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = string.Join(" ", accessors.Select(a => a.Trim()));
+            var inner = string.Join(" ", accessors.Select(a => a.Text.Trim()));
             return header + " { " + inner + " }";
         }
 
         var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
-        lines.AddRange(accessors);
+        lines.AddRange(JoinSiblingChunks(accessors));
         lines.Add(_layout.Indent(indentLevel) + "}");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1228,7 +1233,7 @@ public sealed class AstPrinter
 
     private string FormatEnumEntries(Node node, int indentLevel)
     {
-        var entries = new List<string>();
+        var entries = new List<(Node Node, string Text)>();
         foreach (var child in node.Children)
         {
             if (child.Type is "{" or "}" or ",")
@@ -1236,23 +1241,23 @@ public sealed class AstPrinter
 
             if (child.Type == "enum_entry")
             {
-                entries.Add(FormatEnumEntry(child, indentLevel + 1) + ",");
+                entries.Add((child, FormatEnumEntry(child, indentLevel + 1) + ","));
                 continue;
             }
 
             var formatted = _formatChild(child, indentLevel + 1);
             if (!string.IsNullOrWhiteSpace(formatted))
-                entries.Add(formatted);
+                entries.Add((child, formatted));
         }
 
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = string.Join(" ", entries.Select(e => e.Trim()));
+            var inner = string.Join(" ", entries.Select(e => e.Text.Trim()));
             return "{ " + inner + " }";
         }
 
         var lines = new List<string> { _layout.Indent(indentLevel) + "{" };
-        lines.AddRange(entries);
+        lines.AddRange(JoinSiblingChunks(entries));
         lines.Add(_layout.Indent(indentLevel) + "}");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1376,7 +1381,7 @@ public sealed class AstPrinter
     private string FormatEnumStruct(Node node, int indentLevel)
     {
         var name = "";
-        var members = new List<string>();
+        var members = new List<(Node Node, string Text)>();
         var inBody = false;
 
         foreach (var child in node.Children)
@@ -1400,7 +1405,7 @@ public sealed class AstPrinter
                         break;
                     var member = _formatChild(child, indentLevel + 1);
                     if (!string.IsNullOrWhiteSpace(member))
-                        members.Add(member);
+                        members.Add((child, member));
                     break;
             }
         }
@@ -1408,12 +1413,12 @@ public sealed class AstPrinter
         var header = _layout.Indent(indentLevel) + "enum struct " + name;
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            var inner = string.Join(" ", members.Select(m => m.Text.Trim()));
             return header + " { " + inner + " }";
         }
 
         var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
-        lines.AddRange(members);
+        lines.AddRange(JoinSiblingChunks(members));
         lines.Add(_layout.Indent(indentLevel) + "}");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1528,7 +1533,7 @@ public sealed class AstPrinter
     private string FormatTypeset(Node node, int indentLevel)
     {
         var name = "";
-        var members = new List<string>();
+        var members = new List<(Node Node, string Text)>();
         var inBody = false;
 
         foreach (var child in node.Children)
@@ -1548,14 +1553,14 @@ public sealed class AstPrinter
                 case "}":
                     break;
                 case "typedef_expression":
-                    members.Add(FormatTypedefExpression(child, indentLevel + 1) + ";");
+                    members.Add((child, FormatTypedefExpression(child, indentLevel + 1) + ";"));
                     break;
                 default:
                     if (!inBody)
                         break;
                     var member = _formatChild(child, indentLevel + 1);
                     if (!string.IsNullOrWhiteSpace(member))
-                        members.Add(member);
+                        members.Add((child, member));
                     break;
             }
         }
@@ -1563,12 +1568,12 @@ public sealed class AstPrinter
         var header = _layout.Indent(indentLevel) + "typeset " + name;
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            var inner = string.Join(" ", members.Select(m => m.Text.Trim()));
             return header + " { " + inner + " };";
         }
 
         var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
-        lines.AddRange(members);
+        lines.AddRange(JoinSiblingChunks(members));
         lines.Add(_layout.Indent(indentLevel) + "};");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1592,7 +1597,7 @@ public sealed class AstPrinter
     private string FormatFuncenum(Node node, int indentLevel)
     {
         var name = "";
-        var members = new List<string>();
+        var members = new List<(Node Node, string Text)>();
         var inBody = false;
 
         foreach (var child in node.Children)
@@ -1613,14 +1618,14 @@ public sealed class AstPrinter
                 case "}":
                     break;
                 case "funcenum_member":
-                    members.Add(FormatFuncenumMember(child, indentLevel + 1) + ",");
+                    members.Add((child, FormatFuncenumMember(child, indentLevel + 1) + ","));
                     break;
                 default:
                     if (!inBody)
                         break;
                     var member = _formatChild(child, indentLevel + 1);
                     if (!string.IsNullOrWhiteSpace(member))
-                        members.Add(member);
+                        members.Add((child, member));
                     break;
             }
         }
@@ -1628,12 +1633,12 @@ public sealed class AstPrinter
         var header = _layout.Indent(indentLevel) + "funcenum " + name;
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            var inner = string.Join(" ", members.Select(m => m.Text.Trim()));
             return header + " { " + inner + " };";
         }
 
         var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
-        lines.AddRange(members);
+        lines.AddRange(JoinSiblingChunks(members));
         lines.Add(_layout.Indent(indentLevel) + "};");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1654,7 +1659,7 @@ public sealed class AstPrinter
     private string FormatStruct(Node node, int indentLevel)
     {
         var name = "";
-        var members = new List<string>();
+        var members = new List<(Node Node, string Text)>();
         var inBody = false;
 
         foreach (var child in node.Children)
@@ -1679,7 +1684,7 @@ public sealed class AstPrinter
                         break;
                     var member = _formatChild(child, indentLevel + 1);
                     if (!string.IsNullOrWhiteSpace(member))
-                        members.Add(member);
+                        members.Add((child, member));
                     break;
             }
         }
@@ -1687,12 +1692,12 @@ public sealed class AstPrinter
         var header = _layout.Indent(indentLevel) + "struct " + name;
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            var inner = string.Join(" ", members.Select(m => m.Text.Trim()));
             return header + " { " + inner + " };";
         }
 
         var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
-        lines.AddRange(members);
+        lines.AddRange(JoinSiblingChunks(members));
         lines.Add(_layout.Indent(indentLevel) + "};");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1757,32 +1762,30 @@ public sealed class AstPrinter
 
     private string FormatStructConstructor(Node node, int indentLevel)
     {
-        var fields = new List<string>();
+        var fields = new List<(Node Node, string Text)>();
         foreach (var child in node.Children)
         {
             if (child.Type is "{" or "}" or "," or ";")
                 continue;
 
             var field = _formatChild(child, indentLevel + 1);
-            if (!string.IsNullOrWhiteSpace(field))
-                fields.Add(field);
+            if (string.IsNullOrWhiteSpace(field))
+                continue;
+
+            var line = field.TrimEnd();
+            if (!line.EndsWith(','))
+                line += ",";
+            fields.Add((child, line));
         }
 
         if (!_layout.Options.NewLineAfterOpenBrace)
         {
-            var inner = _layout.JoinComma(fields.Select(f => f.Trim().TrimEnd(',')));
+            var inner = _layout.JoinComma(fields.Select(f => f.Text.Trim().TrimEnd(',')));
             return "{ " + inner + " };";
         }
 
         var lines = new List<string> { _layout.Indent(indentLevel) + "{" };
-        foreach (var field in fields)
-        {
-            var line = field.TrimEnd();
-            if (!line.EndsWith(','))
-                line += ",";
-            lines.Add(line);
-        }
-
+        lines.AddRange(JoinSiblingChunks(fields));
         lines.Add(_layout.Indent(indentLevel) + "};");
         return string.Join(_layout.Options.LineEnding, lines);
     }
@@ -1830,34 +1833,55 @@ public sealed class AstPrinter
 
     private string FormatSourceFile(Node node, int indentLevel)
     {
-        var entries = new List<(string Type, string Text)>();
+        var entries = new List<(Node Node, string Type, string Text)>();
 
         foreach (var child in node.Children)
         {
             var formatted = _formatChild(child, indentLevel);
             if (string.IsNullOrWhiteSpace(formatted))
                 continue;
-            entries.Add((child.Type, formatted));
+            entries.Add((child, child.Type, formatted));
         }
 
         if (_layout.Options.SortIncludes)
             SortIncludeRuns(entries);
 
-        var lines = new List<string>();
+        var forceBlankAfter = new HashSet<int>();
         for (var i = 0; i < entries.Count; i++)
         {
-            lines.Add(entries[i].Text);
-
             var isInclude = entries[i].Type == "preproc_include";
             var nextIsInclude = i + 1 < entries.Count && entries[i + 1].Type == "preproc_include";
             if (isInclude && !nextIsInclude && _layout.Options.NewLineAfterInclude && i + 1 < entries.Count)
-                lines.Add("");
+                forceBlankAfter.Add(i);
         }
 
-        return CleanUpEmptyLines(string.Join(_layout.Options.LineEnding, lines));
+        var chunks = new List<string>();
+        if (entries.Count > 0 && _layout.Options.PreserveEmptyLines && !string.IsNullOrEmpty(_source))
+        {
+            // Use earliest source offset (survives SortIncludes) so leading blanks are not
+            // invented from a later include that was sorted to the front.
+            var earliest = entries.Min(e => e.Node.StartIndex);
+            var leadingNewlines = 0;
+            foreach (var c in _source.AsSpan(0, earliest))
+            {
+                if (c == '\n')
+                    leadingNewlines++;
+            }
+
+            // Leading newlines map 1:1 to blank lines (unlike mid-file gaps, which use newlines-1).
+            var leading = _layout.CapBlankLines(leadingNewlines);
+            for (var i = 0; i < leading; i++)
+                chunks.Add("");
+        }
+
+        chunks.AddRange(JoinSiblingChunks(
+            entries.Select(e => (e.Node, e.Text)).ToList(),
+            forceBlankAfter));
+
+        return CleanUpEmptyLines(string.Join(_layout.Options.LineEnding, chunks));
     }
 
-    private static void SortIncludeRuns(List<(string Type, string Text)> entries)
+    private static void SortIncludeRuns(List<(Node Node, string Type, string Text)> entries)
     {
         var i = 0;
         while (i < entries.Count)
@@ -1877,6 +1901,46 @@ public sealed class AstPrinter
             for (var j = 0; j < run.Count; j++)
                 entries[start + j] = run[j];
         }
+    }
+
+    /// <summary>
+    /// Join formatted siblings, restoring blank lines from original source gaps (capped).
+    /// </summary>
+    private List<string> JoinSiblingChunks(
+        IReadOnlyList<(Node Node, string Text)> siblings,
+        ISet<int>? forceBlankAfterIndexes = null)
+    {
+        var chunks = new List<string>();
+        if (siblings.Count == 0)
+            return chunks;
+
+        for (var i = 0; i < siblings.Count; i++)
+        {
+            chunks.Add(siblings[i].Text);
+            if (i + 1 >= siblings.Count)
+                break;
+
+            var blanks = 0;
+            if (_layout.Options.PreserveEmptyLines && !string.IsNullOrEmpty(_source))
+            {
+                var prev = siblings[i].Node;
+                var next = siblings[i + 1].Node;
+                if (prev.EndIndex < next.StartIndex && next.StartIndex <= _source.Length)
+                {
+                    blanks = LayoutRules.CountBlankLinesInGap(
+                        _source.AsSpan(prev.EndIndex, next.StartIndex - prev.EndIndex));
+                }
+            }
+
+            if (forceBlankAfterIndexes != null && forceBlankAfterIndexes.Contains(i))
+                blanks = Math.Max(blanks, 1);
+
+            blanks = _layout.CapBlankLines(blanks);
+            for (var b = 0; b < blanks; b++)
+                chunks.Add("");
+        }
+
+        return chunks;
     }
 
     private string CleanUpEmptyLines(string text)

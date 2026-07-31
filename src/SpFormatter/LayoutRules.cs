@@ -144,4 +144,28 @@ public sealed class LayoutRules
         (previous == ">" && current == ">") ||
         (previous == "+" && current == "+") ||
         (previous == "-" && current == "-");
+
+    /// <summary>
+    /// Blank lines implied by a source gap between two siblings.
+    /// One newline means adjacent lines (0 blanks). Two newlines means one blank line.
+    /// </summary>
+    public static int CountBlankLinesInGap(ReadOnlySpan<char> gap)
+    {
+        var newlines = 0;
+        foreach (var c in gap)
+        {
+            if (c == '\n')
+                newlines++;
+        }
+
+        return Math.Max(0, newlines - 1);
+    }
+
+    public int CapBlankLines(int blankLines)
+    {
+        if (!_options.PreserveEmptyLines || blankLines <= 0)
+            return 0;
+
+        return Math.Min(blankLines, Math.Max(0, _options.MaxConsecutiveEmptyLines));
+    }
 }

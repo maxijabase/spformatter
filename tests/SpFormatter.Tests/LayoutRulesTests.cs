@@ -58,4 +58,12 @@ public class LayoutRulesTests
         rules.JoinDeclarationParts(new[] { "Handle:", "x" }).Should().Be("Handle:x");
         rules.JoinDeclarationParts(new[] { "Action:", "public", "(args)" }).Should().Be("Action:public(args)");
     }
+
+    [Fact]
+    public void CountBlankLinesInGap_basic_cases()
+    {
+        LayoutRules.CountBlankLinesInGap("\n".AsSpan()).Should().Be(0);
+        LayoutRules.CountBlankLinesInGap("\n\n".AsSpan()).Should().Be(1);
+        LayoutRules.CountBlankLinesInGap("\n\n\n".AsSpan()).Should().Be(2);
+    }
 }
