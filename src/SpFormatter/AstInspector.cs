@@ -1,14 +1,27 @@
+using System.Text;
 using TreeSitter;
 
 namespace SpFormatter;
 
 public class AstInspector
 {
+    public static string FormatTreeStructure(Node node, int depth = 0)
+    {
+        var sb = new StringBuilder();
+        AppendTreeStructure(sb, node, depth);
+        return sb.ToString();
+    }
+
     public static void PrintTreeStructure(Node node, int depth = 0)
+    {
+        Console.Write(FormatTreeStructure(node, depth));
+    }
+
+    private static void AppendTreeStructure(StringBuilder sb, Node node, int depth)
     {
         var indent = new string(' ', depth * 2);
         var nodeInfo = $"{node.Type}";
-        
+
         if (!string.IsNullOrEmpty(node.Text.Trim()))
         {
             var text = node.Text.Replace("\n", "\\n").Replace("\r", "\\r");
@@ -16,18 +29,16 @@ public class AstInspector
                 text = text[..47] + "...";
             nodeInfo += $" '{text}'";
         }
-        
+
         if (node.IsError)
             nodeInfo += " [ERROR]";
         if (node.IsMissing)
             nodeInfo += " [MISSING]";
-            
-        Console.WriteLine($"{indent}{nodeInfo}");
-        
+
+        sb.Append(indent).AppendLine(nodeInfo);
+
         foreach (var child in node.Children)
-        {
-            PrintTreeStructure(child, depth + 1);
-        }
+            AppendTreeStructure(sb, child, depth + 1);
     }
 
     public static void PrintNamedNodesOnly(Node node, int depth = 0)
