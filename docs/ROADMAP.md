@@ -55,6 +55,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Expression / break / continue / return | AstPrinter; RequireSemicolons preserved |
 | If / else | AstPrinter; no bare-if brace injection; bool_literal conditions |
 | For / while | AstPrinter; bare bodies preserved; empty for(;;) |
+| Switch / case | AstPrinter; multi-value case commas |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -110,7 +111,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 7. Switch and case
 
-- Status: `Todo`
+- Status: `Done`
 - Move `switch_statement` and `switch_case` into `AstPrinter`
 - Exact-match control-structure goldens where expected files exist
 - Commit

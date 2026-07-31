@@ -112,6 +112,12 @@ public sealed class AstPrinter
             case "while_statement":
                 result = FormatWhileStatement(node, indentLevel);
                 return true;
+            case "switch_statement":
+                result = FormatSwitchStatement(node, indentLevel);
+                return true;
+            case "switch_case":
+                result = FormatSwitchCase(node, indentLevel);
+                return true;
             default:
                 result = string.Empty;
                 return false;
@@ -566,6 +572,122 @@ public sealed class AstPrinter
             indent + "while" + space + "(" + conditionText + ")"
         };
         AppendControlBody(lines, body, indentLevel);
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatSwitchStatement(Node node, int indentLevel)
+    {
+        Node? switchExpression = null;
+        var cases = new List<Node>();
+        var inParens = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "switch":
+                case "{":
+                case "}":
+                    continue;
+                case "(":
+                    inParens = true;
+                    continue;
+                case ")":
+                    inParens = false;
+                    continue;
+                case "switch_case":
+                    cases.Add(child);
+                    continue;
+            }
+
+            if (inParens)
+                switchExpression ??= child;
+        }
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var exprText = switchExpression != null ? _formatChild(switchExpression, 0) : "";
+        var lines = new List<string>
+        {
+            indent + "switch" + space + "(" + exprText + ")",
+            indent + "{"
+        };
+
+        foreach (var caseNode in cases)
+            lines.Add(_formatChild(caseNode, indentLevel + 1));
+
+        lines.Add(indent + "}");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatSwitchCase(Node node, int indentLevel)
+    {
+        var caseLineParts = new List<string>();
+        Node? caseBody = null;
+        var foundColon = false;
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type == "block")
+            {
+                caseBody = child;
+                continue;
+            }
+
+            if (foundColon)
+                continue;
+
+            var formatted = child.Type is "case" or "default" or ":" or ","
+                ? child.Text
+                : _formatChild(child, 0);
+
+            if (string.IsNullOrEmpty(formatted))
+                continue;
+
+            if (formatted == ":")
+                foundColon = true;
+            caseLineParts.Add(formatted);
+        }
+
+        var caseLineText = new System.Text.StringBuilder();
+        for (var i = 0; i < caseLineParts.Count; i++)
+        {
+            var part = caseLineParts[i];
+            if (i == 0)
+            {
+                caseLineText.Append(part);
+                continue;
+            }
+
+            if (part == ":" || part == ",")
+            {
+                caseLineText.Append(part);
+                continue;
+            }
+
+            if (caseLineParts[i - 1] == "case")
+            {
+                caseLineText.Append(' ').Append(part);
+                continue;
+            }
+
+            if (caseLineParts[i - 1] == ",")
+            {
+                caseLineText.Append(_layout.Options.SpaceAfterComma ? " " + part : part);
+                continue;
+            }
+
+            caseLineText.Append(' ').Append(part);
+        }
+
+        var lines = new List<string>
+        {
+            _layout.Indent(indentLevel) + caseLineText
+        };
+
+        if (caseBody != null)
+            lines.Add(_formatChild(caseBody, indentLevel));
+
         return string.Join(_layout.Options.LineEnding, lines);
     }
 
