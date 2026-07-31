@@ -9,15 +9,16 @@ Statuses:
 - **Legacy-only**: works only through the old god class
 - **Out of scope**: not attempting yet
 
-## Baseline (post .NET 10 retarget)
+## Baseline
 
-Recorded with `dotnet test SpFormatter.slnx` on Windows after the net10 upgrade:
+Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 82
-- Failed: 78
-- Total: 160
+- Passed: 252
+- Failed: 0
+- Skipped: 6
+- Total: 258
 
-Many exact-match failures are CRLF in expected fixtures vs `\n` formatter output. Treat current green as legacy signal, not gospel.
+See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
 ## Checklist
 

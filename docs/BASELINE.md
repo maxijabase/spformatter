@@ -1,6 +1,6 @@
 # Test baseline
 
-## Current (after course-correction phases 0–3)
+## Current
 
 Command:
 
@@ -10,12 +10,12 @@ dotnet test SpFormatter.slnx --verbosity minimal
 
 | Metric | Count |
 |---|---|
-| Passed | 250 |
+| Passed | 252 |
 | Failed | 0 |
-| Skipped | 8 |
+| Skipped | 6 |
 | Total | 258 |
 
-Skipped items are intentional: CLI backup (incomplete product surface), and a few legacy option goldens that expect compact one-liners the printer no longer preserves.
+Skipped items are a few legacy option goldens that expect compact one-liners the printer no longer preserves.
 
 ## Earlier snapshot (right after .NET 10 retarget)
 
@@ -34,3 +34,4 @@ Many of those failures were CRLF in fixtures vs `\n` formatter output.
 - Idempotency covers Expressions / Functions / Variables / ControlStructures inputs.
 - Golden discovery auto-loads exact pairs under those categories.
 - CLI tests fail if the CLI binary is missing (project reference builds it).
+- CLI `--backup` writes in place with a `.bak` file.
