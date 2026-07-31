@@ -173,11 +173,6 @@ public class SourcePawnFormatter : IDisposable
             case "continue_statement":
                 return FormatBreakContinueStatement(node, indentLevel);
             
-            case "array_access":
-            case "array_indexed_access":
-            case "fixed_dimension":
-                return FormatArrayAccess(node);
-            
             case "comment":
             case "line_comment":
             case "block_comment":
@@ -870,43 +865,6 @@ public class SourcePawnFormatter : IDisposable
     private bool IsOperator(string nodeType)
     {
         return _layout.IsBinaryOrAssignmentOperator(nodeType);
-    }
-    
-    private string FormatArrayAccess(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            if (child.Type == "[")
-            {
-                if (_options.SpaceInArrayBrackets)
-                {
-                    parts.Add("[ ");
-                }
-                else
-                {
-                    parts.Add("[");
-                }
-            }
-            else if (child.Type == "]")
-            {
-                if (_options.SpaceInArrayBrackets)
-                {
-                    parts.Add(" ]");
-                }
-                else
-                {
-                    parts.Add("]");
-                }
-            }
-            else
-            {
-                parts.Add(FormatNode(child, 0));
-            }
-        }
-        
-        return string.Join("", parts);
     }
     
     private string FormatComment(Node node, int indentLevel)

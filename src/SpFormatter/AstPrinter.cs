@@ -82,10 +82,40 @@ public sealed class AstPrinter
             case "type":
                 result = FormatType(node);
                 return true;
+            case "array_access":
+            case "array_indexed_access":
+            case "fixed_dimension":
+                result = FormatArrayAccess(node);
+                return true;
             default:
                 result = string.Empty;
                 return false;
         }
+    }
+
+    private string FormatArrayAccess(Node node)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == "[")
+            {
+                parts.Add(_layout.Options.SpaceInArrayBrackets ? "[ " : "[");
+                continue;
+            }
+
+            if (child.Type == "]")
+            {
+                parts.Add(_layout.Options.SpaceInArrayBrackets ? " ]" : "]");
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return string.Join("", parts);
     }
 
     private static bool IsMisparsedFunctionDefinition(Node node)

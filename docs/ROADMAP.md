@@ -50,13 +50,14 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Variable declarations | AstPrinter + JoinDeclarationParts |
 | Call args | AstPrinter + JoinComma |
 | Simple functions / natives / params | AstPrinter; misparse fallbacks still legacy |
+| Arrays / indexed access | AstPrinter; SpaceInArrayBrackets option |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
 
 ### Step 1. Arrays and indexed access
 
-- Status: `Todo`
+- Status: `Done`
 - Move `array_access`, `array_indexed_access`, `fixed_dimension` into `AstPrinter` using `LayoutRules.ArrayAccess` / `SpaceInArrayBrackets`
 - Remove legacy `FormatArrayAccess`
 - Mark arrays Supported in SUPPORTED.md (or Partial only if a real edge remains)
