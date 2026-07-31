@@ -185,7 +185,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 16. Roadmap complete hygiene
 
-- Status: `Todo`
+- Status: `Done`
 - Refresh BASELINE.md counts
 - Ensure AGENTS.md current phase says printer migration complete (or names only Recovery leftovers)
 - Confirm corpus `--check` still passes

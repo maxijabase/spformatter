@@ -10,12 +10,21 @@ dotnet test SpFormatter.slnx --verbosity minimal
 
 | Metric | Count |
 |---|---|
+| Passed | 302 |
+| Failed | 0 |
+| Skipped | 0 |
+| Total | 302 |
+
+Printer migration roadmap is complete. Remaining Recovery path is opt-in via `AllowSyntaxRecovery`.
+
+## Earlier snapshot (mid-migration)
+
+| Metric | Count |
+|---|---|
 | Passed | 253 |
 | Failed | 0 |
 | Skipped | 6 |
 | Total | 259 |
-
-Skipped items are a few legacy option goldens that expect compact one-liners the printer no longer preserves.
 
 ## Earlier snapshot (right after .NET 10 retarget)
 
@@ -35,3 +44,4 @@ Many of those failures were CRLF in fixtures vs `\n` formatter output.
 - Golden discovery auto-loads exact pairs under those categories.
 - CLI tests fail if the CLI binary is missing (project reference builds it).
 - CLI `--backup` writes in place with a `.bak` file.
+- Fail closed is the default; recovery tests opt into `AllowSyntaxRecovery`.

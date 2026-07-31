@@ -12,9 +12,9 @@ SourcePawn formatter for .NET. Parse with Tree-sitter, print with a pretty-print
 
 ## Current phase
 
-Follow [docs/ROADMAP.md](docs/ROADMAP.md). Next open step is arrays/indexed access, then blocks and control structures.
+Printer migration in [docs/ROADMAP.md](docs/ROADMAP.md) is complete. Typed constructs print through `AstPrinter` + `LayoutRules`. `SourcePawnFormatter` is a thin facade. ERROR recovery lives under `Recovery/` and is opt-in via `AllowSyntaxRecovery`.
 
-Expressions, calls, variables, and simple functions/natives already route through `AstPrinter` + `LayoutRules`. Misparsed control/call shapes still use legacy fallbacks.
+Deferred product asks (alignment, optional semicolons, grammar work) stay out of scope unless explicitly requested.
 
 ## Hard stops
 
