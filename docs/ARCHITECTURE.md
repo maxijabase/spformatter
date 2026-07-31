@@ -4,53 +4,34 @@
 
 Valid SourcePawn source in, consistently formatted SourcePawn out.
 
-Parse and print are separate. Invalid input should fail closed (report errors), not silently recover, unless Recovery is explicitly enabled later.
+Parse and print are separate. Invalid input fails closed unless `AllowSyntaxRecovery` is enabled.
 
 ## Current shape
 
 ```
 source -> SourcePawnParser -> SourcePawnFormatter facade
-                              -> AstPrinter (migrated expressions)
-                              -> legacy FormatX methods (everything else)
-                              -> LayoutRules for shared spacing/indent
+                              -> AstPrinter (typed constructs)
+                              -> LayoutRules (spacing / indent)
+                              -> Legacy.UnknownNodePrinter (fallback)
+                              -> Recovery.SyntaxRecovery (opt-in only)
 ```
 
 `FormatWithResult` returns `FormatResult`. `Format` throws on failure for CLI/UI compatibility.
 
-Legacy recovery for broken trees still runs inside `FormatWithResult` until a gated Recovery module exists.
-
-
-## Target shape
-
-```
-source -> Parse -> typed print path -> LayoutRules(options) -> text
-                 \-> FormatResult errors (fail closed)
-```
+## Module responsibilities
 
 | Module | Responsibility |
 |---|---|
 | `SourcePawnParser` | Tree-sitter only. Keep small. |
-| `AstPrinter` / construct printers | Emit from known node types. |
-| `LayoutRules` | Spaces, newlines, indent from options. One place for spacing policy. |
+| `AstPrinter` | Emit from known node types. |
+| `LayoutRules` | Spaces, newlines, indent from options. |
 | `FormatResult` | Success text or structured errors. |
-| `Recovery` (later, optional) | ERROR hacks / wrappers. Gated. Must not affect clean trees. |
-
-`SourcePawnFormatter.Format` stays as the public facade so CLI/UI keep compiling while internals move.
+| `Legacy.UnknownNodePrinter` | Last-resort join for unowned nodes (mostly recovery). |
+| `Recovery.SyntaxRecovery` | ERROR hacks / expression wrappers. Gated by `AllowSyntaxRecovery`. |
 
 ## What must not live in the printer
 
-- Grammar fixes that belong upstream in tree-sitter-sourcepawn
-- Silent structure rewrites (brace wrap, top-level reorder) as defaults
-- Duplicate spacing policy (AST path + regex path disagreeing)
-- Dead options that UI exposes but the engine ignores
-
-## Projects
-
-| Project | Role |
-|---|---|
-| `src/SpFormatter` | Library: parse + format |
-| `src/SpFormatter.Cli` | CLI |
-| `src/SpFormatter.UI` | WPF playground |
-| `tests/SpFormatter.Tests` | Unit / golden tests |
-
-Solution file: `SpFormatter.slnx`
+- New silent brace injection for bare `if`
+- Silent top-level include/function reordering
+- Regex spacing on clean AstPrinter paths
+- New options without diverging true/false tests

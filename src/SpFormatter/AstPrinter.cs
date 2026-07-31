@@ -52,6 +52,19 @@ public sealed class AstPrinter
             case "visibility":
                 result = node.Text;
                 return true;
+            case "(":
+            case ")":
+            case "{":
+            case "}":
+            case ";":
+            case ",":
+            case ":":
+            case "?":
+            case ".":
+            case "[":
+            case "]":
+                result = node.Text;
+                return true;
             case "ternary_expression":
             case "conditional_expression":
                 result = FormatTernaryExpression(node);

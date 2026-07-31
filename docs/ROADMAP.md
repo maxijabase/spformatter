@@ -59,6 +59,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Comments / preprocessor | AstPrinter; SortIncludes opt-in only |
 | Source file layout | AstPrinter; source order preserved; empty-line cleanup fixed |
 | Fail closed default | AllowSyntaxRecovery opt-in; regex spacing recovery-only |
+| Facade shrink | SourcePawnFormatter + Legacy/ + Recovery/ |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -176,7 +177,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 15. Shrink SourcePawnFormatter facade
 
-- Status: `Todo`
+- Status: `Done`
 - `SourcePawnFormatter` should mostly parse, call AstPrinter, return FormatResult
 - Legacy helpers gone or isolated under `Legacy/` or `Recovery/`
 - Update ARCHITECTURE.md to match reality
