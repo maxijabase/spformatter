@@ -51,6 +51,9 @@ public class SourcePawnFormatter : IDisposable
 
         if (tree.RootNode.HasError)
         {
+            if (!_options.AllowSyntaxRecovery)
+                return FormatResult.Fail(_parser.GetSyntaxErrors(sourceCode));
+
             try
             {
                 var malformedResult = FormatNode(tree.RootNode, 0, sourceCode);
@@ -79,12 +82,15 @@ public class SourcePawnFormatter : IDisposable
             return FormatResult.Fail(_parser.GetSyntaxErrors(sourceCode));
         }
 
-        var isExpressionOnly = IsExpressionOnlyFormatting(tree.RootNode, sourceCode);
         var text = FormatNode(tree.RootNode, 0, sourceCode);
 
-        if (isExpressionOnly && !sourceCode.TrimEnd().EndsWith(";") && text.TrimEnd().EndsWith(";"))
+        if (_options.AllowSyntaxRecovery)
         {
-            text = text.TrimEnd().TrimEnd(';');
+            var isExpressionOnly = IsExpressionOnlyFormatting(tree.RootNode, sourceCode);
+            if (isExpressionOnly && !sourceCode.TrimEnd().EndsWith(";") && text.TrimEnd().EndsWith(";"))
+            {
+                text = text.TrimEnd().TrimEnd(';');
+            }
         }
 
         return FormatResult.Ok(text);
@@ -513,10 +519,7 @@ public class SourcePawnFormatter : IDisposable
                 }
             }
             
-            // Post-process to add spaces around complete binary operators
-            var finalResult = result.ToString();
-            finalResult = AddSpacesAroundBinaryOperators(finalResult);
-            return finalResult;
+            return result.ToString();
         }
         
         // For leaf nodes or unrecognized structures, return original text with proper indentation
@@ -528,6 +531,9 @@ public class SourcePawnFormatter : IDisposable
         return node.Text;
     }
 
+    /// <summary>
+    /// Recovery-only regex spacing. Must not be used on clean AstPrinter paths.
+    /// </summary>
     private string AddSpacesAroundBinaryOperators(string text)
     {
         if (!_options.SpaceAroundOperators)

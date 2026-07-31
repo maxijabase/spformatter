@@ -30,6 +30,11 @@ public class FormattingOptions
 
     public bool RequireSemicolons { get; set; } = true;
 
+    /// <summary>
+    /// When false (default), syntax errors fail closed. When true, legacy ERROR-tree and expression-wrapper recovery may run.
+    /// </summary>
+    public bool AllowSyntaxRecovery { get; set; } = false;
+
     public string LineEnding { get; set; } = Environment.NewLine;
 
     public static FormattingOptions Default => new();

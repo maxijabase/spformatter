@@ -12,7 +12,7 @@ public class ErrorHandlingTests : FormatterTestBase
     #region Syntax Error Recovery
     
     [Fact]
-    public void TestFormatterDoesNotCrashOnMalformedSyntax()
+    public void TestFormatterDoesNotCrashOnMalformedSyntax_WithRecovery()
     {
         var malformedCases = new[]
         {
@@ -25,26 +25,49 @@ public class ErrorHandlingTests : FormatterTestBase
             "ErrorHandling/MalformedSyntax/missing_argument_input.sp",
         };
 
+        using var recoveryFormatter = new SourcePawnFormatter(new FormattingOptions
+        {
+            LineEnding = "\n",
+            AllowSyntaxRecovery = true
+        });
+
         foreach (var testCaseFile in malformedCases)
         {
             var testCasesDir = GetTestCasesDirectory();
             var inputFile = Path.Combine(testCasesDir, testCaseFile);
             var input = File.ReadAllText(inputFile);
-            AssertFormatDoesNotThrow(input);
+            Action act = () => recoveryFormatter.Format(input);
+            act.Should().NotThrow($"Recovery path should not crash on: {testCaseFile}");
         }
+    }
+
+    [Fact]
+    public void Malformed_syntax_fails_closed_by_default()
+    {
+        var testCasesDir = GetTestCasesDirectory();
+        var inputFile = Path.Combine(testCasesDir, "ErrorHandling/MalformedSyntax/missing_value_input.sp");
+        var input = File.ReadAllText(inputFile);
+        Action act = () => _formatter.Format(input);
+        act.Should().Throw<FormatException>();
     }
     
     [Fact]
-    public void TestFormatterHandlesSyntaxErrorsGracefully()
+    public void TestFormatterHandlesSyntaxErrorsGracefully_WithRecovery()
     {
         var testCasesDir = GetTestCasesDirectory();
         var inputFile = Path.Combine(testCasesDir, "ErrorHandling/SyntaxErrors/malformed_function_input.sp");
         var input = File.ReadAllText(inputFile);
 
-        // Should not crash and should format the valid parts
-        AssertFormatDoesNotThrow(input);
+        using var recoveryFormatter = new SourcePawnFormatter(new FormattingOptions
+        {
+            LineEnding = "\n",
+            AllowSyntaxRecovery = true
+        });
 
-        var result = _formatter.Format(input);
+        Action act = () => recoveryFormatter.Format(input);
+        act.Should().NotThrow();
+
+        var result = recoveryFormatter.Format(input);
         result.Should().Contain("int x = 5;");
         result.Should().Contain("int y = 10;");
     }
@@ -221,12 +244,18 @@ public class ErrorHandlingTests : FormatterTestBase
             "ErrorHandling/RegressionTests/double_semicolons_test4_input.sp"
         };
 
+        using var recoveryFormatter = new SourcePawnFormatter(new FormattingOptions
+        {
+            LineEnding = "\n",
+            AllowSyntaxRecovery = true
+        });
+
         foreach (var testCaseFile in testCaseFiles)
         {
             var testCasesDir = GetTestCasesDirectory();
             var inputFile = Path.Combine(testCasesDir, testCaseFile);
             var input = File.ReadAllText(inputFile);
-            var result = _formatter.Format(input);
+            var result = recoveryFormatter.Format(input);
             result.Should().NotContain(";;", $"No double semicolons should appear in: {testCaseFile}");
         }
     }

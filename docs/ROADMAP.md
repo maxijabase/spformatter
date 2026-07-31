@@ -58,6 +58,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Switch / case | AstPrinter; multi-value case commas |
 | Comments / preprocessor | AstPrinter; SortIncludes opt-in only |
 | Source file layout | AstPrinter; source order preserved; empty-line cleanup fixed |
+| Fail closed default | AllowSyntaxRecovery opt-in; regex spacing recovery-only |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -146,14 +147,14 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 11. Remove legacy regex spacing on clean trees
 
-- Status: `Todo`
+- Status: `Done`
 - Delete or quarantine `AddSpacesAroundBinaryOperators` / `RemoveSpacesAroundUnaryOperators` so clean AstPrinter paths never call them
 - Unknown-node path must not reintroduce regex as the primary formatter
 - Commit
 
 ### Step 12. Fail closed for invalid input
 
-- Status: `Todo`
+- Status: `Done`
 - New default: syntax errors → `FormatResult` failure / exception, no expression wrapping
 - Move `TryFormatAsExpression` and ERROR-tree formatting behind an explicit Recovery flag or delete if unused
 - Update SUPPORTED.md: expression fragments and ERROR recovery Out of scope or Recovery-only
