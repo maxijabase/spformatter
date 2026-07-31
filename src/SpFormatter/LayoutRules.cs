@@ -40,9 +40,13 @@ public sealed class LayoutRules
         return $"{target}[{index}]";
     }
 
-    public bool IsBinaryOrAssignmentOperator(string nodeType) =>
+    public bool IsAssignmentOperator(string nodeType) =>
         nodeType is "=" or "+=" or "-=" or "*=" or "/=" or "%="
-            or "+" or "-" or "*" or "/" or "%"
+            or "&=" or "|=" or "^=" or "<<=" or ">>=";
+
+    public bool IsBinaryOrAssignmentOperator(string nodeType) =>
+        IsAssignmentOperator(nodeType)
+            || nodeType is "+" or "-" or "*" or "/" or "%"
             or "==" or "!=" or "<" or ">" or "<=" or ">="
             or "&&" or "||"
             or "&" or "|" or "^" or "<<" or ">>";

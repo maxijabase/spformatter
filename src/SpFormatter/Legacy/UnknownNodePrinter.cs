@@ -53,11 +53,11 @@ public sealed class UnknownNodePrinter
                 {
                     result.Append(current);
                 }
-                else if (current == "(" || previous == ")")
+                else if (current == "(" || current.StartsWith('(') || previous == ")")
                 {
                     result.Append(current);
                 }
-                else if (current == ")" || previous == "(")
+                else if (current == ")" || previous == "(" || previous.StartsWith('('))
                 {
                     result.Append(current);
                 }

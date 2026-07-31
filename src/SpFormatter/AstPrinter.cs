@@ -709,11 +709,12 @@ public sealed class AstPrinter
         var commentText = node.Text;
 
         if (commentText.StartsWith("//", StringComparison.Ordinal))
-            return indent + commentText;
+            return indent + commentText.Replace("\r\n", "\n").Replace('\r', '\n')
+                .Replace("\n", _layout.Options.LineEnding);
 
         if (commentText.StartsWith("/*", StringComparison.Ordinal))
         {
-            var lines = commentText.Split('\n');
+            var lines = commentText.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
             var result = new List<string> { indent + lines[0] };
 
             for (var i = 1; i < lines.Length; i++)
@@ -983,7 +984,7 @@ public sealed class AstPrinter
             if (string.IsNullOrEmpty(formatted))
                 continue;
 
-            if (child.Type is "=" or "+=" or "-=" or "*=" or "/=" or "%=")
+            if (_layout.IsAssignmentOperator(child.Type))
                 parts.Add(_layout.FormatAssignmentOperator(formatted.Trim()));
             else
                 parts.Add(formatted);
@@ -1042,21 +1043,36 @@ public sealed class AstPrinter
 
     private string FormatTernaryExpression(Node node)
     {
-        var parts = new List<string>();
+        // tree-sitter-sourcepawn omits the ':' token from ternary children.
+        Node? condition = null;
+        Node? consequence = null;
+        Node? alternative = null;
+        var sawQuestion = false;
+
         foreach (var child in node.Children)
         {
-            var formatted = _formatChild(child, 0);
-            if (string.IsNullOrEmpty(formatted))
+            if (child.Type == "?")
+            {
+                sawQuestion = true;
+                continue;
+            }
+
+            if (child.Type == ":")
                 continue;
 
-            if (child.Type == "?")
-                parts.Add(_layout.Options.SpaceAroundOperators ? " ? " : "?");
-            else if (child.Type == ":")
-                parts.Add(_layout.Options.SpaceAroundOperators ? " : " : ":");
+            if (!sawQuestion)
+                condition = child;
+            else if (consequence == null)
+                consequence = child;
             else
-                parts.Add(formatted);
+                alternative = child;
         }
 
-        return string.Join("", parts);
+        var conditionText = condition != null ? _formatChild(condition, 0) : "";
+        var consequenceText = consequence != null ? _formatChild(consequence, 0) : "";
+        var alternativeText = alternative != null ? _formatChild(alternative, 0) : "";
+        var question = _layout.Options.SpaceAroundOperators ? " ? " : "?";
+        var colon = _layout.Options.SpaceAroundOperators ? " : " : ":";
+        return conditionText + question + consequenceText + colon + alternativeText;
     }
 }
