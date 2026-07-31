@@ -145,9 +145,6 @@ public class SourcePawnFormatter : IDisposable
             case "function_definition":
                 return FormatFunctionDefinition(node, indentLevel, originalSource);
             
-            case "function_declaration":
-                return FormatFunctionDeclaration(node, indentLevel);
-            
             case "block":
                 return FormatBlock(node, indentLevel);
             
@@ -181,9 +178,6 @@ public class SourcePawnFormatter : IDisposable
             case "fixed_dimension":
                 return FormatArrayAccess(node);
             
-            case "native_declaration":
-                return FormatNativeDeclaration(node, indentLevel);
-            
             case "comment":
             case "line_comment":
             case "block_comment":
@@ -196,12 +190,6 @@ public class SourcePawnFormatter : IDisposable
             case "preproc_ifdef":
             case "preproc_ifndef":
                 return FormatPreprocessor(node, indentLevel);
-            
-            case "parameter_declarations":
-                return FormatParameterDeclarations(node);
-            
-            case "type":
-                return FormatType(node);
             
             // Punctuation - return as-is
             case "(":
@@ -371,41 +359,6 @@ public class SourcePawnFormatter : IDisposable
         return string.Join(_options.LineEnding, result);
     }
 
-    private string FormatFunctionDeclaration(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            if (child.Type != ";")
-            {
-                var formatted = FormatNode(child, 0);
-                if (!string.IsNullOrEmpty(formatted))
-                {
-                    parts.Add(formatted);
-                }
-            }
-        }
-
-        var signature = currentIndent;
-        for (var i = 0; i < parts.Count; i++)
-        {
-            var part = parts[i];
-            if (i > 0)
-            {
-                if (part.StartsWith("("))
-                    signature += _options.SpaceBeforeOpenParen ? " " : "";
-                else
-                    signature += " ";
-            }
-
-            signature += part;
-        }
-        
-        return signature + ";";
-    }
-    
     private string FormatFunctionDefinition(Node node, int indentLevel, string? originalSource = null)
     {
         var currentIndent = GetIndent(indentLevel);
@@ -805,71 +758,6 @@ public class SourcePawnFormatter : IDisposable
         return currentIndent + string.Join("", parts) + ";";
     }
     
-    private string FormatParameterDeclarations(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            
-            // Include all non-empty formatted children (not just parameter_declaration)
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                parts.Add(formatted);
-            }
-        }
-        
-        // Join all parts together and then apply comma spacing
-        var result = string.Join("", parts);
-        
-        // Apply comma spacing: replace ", " patterns and ensure proper spacing
-        if (_options.SpaceAfterComma)
-        {
-            // Replace any existing comma patterns with proper spacing
-            result = System.Text.RegularExpressions.Regex.Replace(result, @",\s*", ", ");
-        }
-        else
-        {
-            // Remove spaces after commas
-            result = System.Text.RegularExpressions.Regex.Replace(result, @",\s+", ",");
-        }
-        
-        return result;
-    }
-    
-    private string FormatParameterDeclaration(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                parts.Add(formatted);
-            }
-        }
-        
-        return string.Join(" ", parts);
-    }
-    
-    private string FormatType(Node node)
-    {
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                parts.Add(formatted);
-            }
-        }
-        
-        return string.Join("", parts);
-    }
-    
     private string FormatForStatement(Node node, int indentLevel)
     {
         var currentIndent = GetIndent(indentLevel);
@@ -1019,23 +907,6 @@ public class SourcePawnFormatter : IDisposable
         }
         
         return string.Join("", parts);
-    }
-    
-    private string FormatNativeDeclaration(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var parts = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                parts.Add(formatted);
-            }
-        }
-        
-        return currentIndent + string.Join(" ", parts) + ";";
     }
     
     private string FormatComment(Node node, int indentLevel)

@@ -60,10 +60,187 @@ public sealed class AstPrinter
             case "old_variable_declaration":
                 result = FormatVariableDeclaration(node, indentLevel);
                 return true;
+            case "function_definition":
+                if (IsMisparsedFunctionDefinition(node))
+                {
+                    result = string.Empty;
+                    return false;
+                }
+                if (!TryFormatFunctionDefinition(node, indentLevel, out result))
+                    return false;
+                return true;
+            case "function_declaration":
+            case "native_declaration":
+                result = FormatFunctionDeclaration(node, indentLevel);
+                return true;
+            case "parameter_declarations":
+                result = FormatParameterDeclarations(node);
+                return true;
+            case "parameter_declaration":
+                result = FormatParameterDeclaration(node);
+                return true;
+            case "type":
+                result = FormatType(node);
+                return true;
             default:
                 result = string.Empty;
                 return false;
         }
+    }
+
+    private static bool IsMisparsedFunctionDefinition(Node node)
+    {
+        string? nameText = null;
+        var hasParameters = false;
+        var hasExpressionStatement = false;
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type == "identifier" && nameText == null)
+                nameText = child.Text;
+            else if (child.Type == "parameter_declarations")
+                hasParameters = true;
+            else if (child.Type == "expression_statement")
+                hasExpressionStatement = true;
+        }
+
+        if (nameText is "if" or "else" or "for" or "while" or "switch" or "do")
+            return true;
+
+        return hasParameters && hasExpressionStatement;
+    }
+
+    private bool TryFormatFunctionDefinition(Node node, int indentLevel, out string result)
+    {
+        Node? visibility = null, returnType = null, functionName = null, parameters = null, body = null;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "visibility":
+                    visibility = child;
+                    break;
+                case "type":
+                    returnType = child;
+                    break;
+                case "identifier":
+                    functionName ??= child;
+                    break;
+                case "parameter_declarations":
+                    parameters = child;
+                    break;
+                case "block":
+                    body = child;
+                    break;
+            }
+        }
+
+        if (body != null && !_layout.Options.NewLineAfterOpenBrace)
+        {
+            result = string.Empty;
+            return false;
+        }
+
+        var signature = _layout.Indent(indentLevel);
+        if (visibility != null)
+            signature += _formatChild(visibility, 0) + " ";
+        if (returnType != null)
+            signature += _formatChild(returnType, 0) + " ";
+        if (functionName != null)
+            signature += _formatChild(functionName, 0);
+        if (parameters != null)
+        {
+            var paramsText = _formatChild(parameters, 0);
+            if (_layout.Options.SpaceBeforeOpenParen && paramsText.StartsWith('('))
+                signature += " ";
+            signature += paramsText;
+        }
+
+        if (body == null)
+        {
+            result = signature;
+            return true;
+        }
+
+        result = signature + _layout.Options.LineEnding + _formatChild(body, indentLevel);
+        return true;
+    }
+
+    private string FormatFunctionDeclaration(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var signature = _layout.Indent(indentLevel);
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i];
+            if (i > 0)
+            {
+                if (part.StartsWith('('))
+                    signature += _layout.Options.SpaceBeforeOpenParen ? " " : "";
+                else
+                    signature += " ";
+            }
+
+            signature += part;
+        }
+
+        return signature + ";";
+    }
+
+    private string FormatParameterDeclarations(Node node)
+    {
+        var parameters = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "(" or ")" or ",")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parameters.Add(formatted);
+        }
+
+        if (parameters.Count == 0)
+            return "()";
+
+        return "(" + _layout.JoinComma(parameters) + ")";
+    }
+
+    private string FormatParameterDeclaration(Node node)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            var formatted = FormatDeclarationChild(child);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.JoinDeclarationParts(parts);
+    }
+
+    private string FormatType(Node node)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return string.Join("", parts);
     }
 
     private string FormatVariableDeclaration(Node node, int indentLevel)

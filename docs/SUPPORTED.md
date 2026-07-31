@@ -29,8 +29,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | assignment | Supported | `AstPrinter` |
 | call expressions / args | Supported | `call_expression` and `call_arguments` both in `AstPrinter`; comma spacing via `LayoutRules.JoinComma` |
 | variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts`; array dimensions still format via legacy `FormatArrayAccess` when present |
-| function definitions / declarations | Partial | includes misparse fallbacks for control structures |
-| native declarations | Partial | |
+| function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparsed control/call shapes still use legacy fallbacks |
+| native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
 | if / else | Partial | syntax-only tests common; brace injection exists |
 | for / while | Partial | |
 | switch / case | Partial | |
