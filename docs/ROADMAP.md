@@ -229,8 +229,8 @@ Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chu
 
 ### Step 22. Product version 0.1.0
 
-- Status: `Todo`
-- Central version via `Directory.Build.props` (or equivalent); start at `0.1.0`
+- Status: `Done`
+- Central version via `Directory.Build.props`; start at `0.1.0`
 
 ### Step 23. Clean corpus layout pass
 
