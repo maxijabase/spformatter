@@ -190,6 +190,55 @@ public sealed class AstPrinter
             case "enum_struct_method":
                 result = FormatEnumStructMethod(node, indentLevel);
                 return true;
+            case "typedef":
+                result = FormatTypedef(node, indentLevel);
+                return true;
+            case "typedef_expression":
+                result = FormatTypedefExpression(node, indentLevel);
+                return true;
+            case "typeset":
+                result = FormatTypeset(node, indentLevel);
+                return true;
+            case "functag":
+                result = FormatFunctag(node, indentLevel);
+                return true;
+            case "funcenum":
+                result = FormatFuncenum(node, indentLevel);
+                return true;
+            case "funcenum_member":
+                result = FormatFuncenumMember(node, indentLevel);
+                return true;
+            case "struct":
+                result = FormatStruct(node, indentLevel);
+                return true;
+            case "struct_field":
+            case "old_struct_field":
+                result = FormatStructField(node, indentLevel);
+                return true;
+            case "struct_declaration":
+                result = FormatStructDeclaration(node, indentLevel);
+                return true;
+            case "struct_constructor":
+                result = FormatStructConstructor(node, indentLevel);
+                return true;
+            case "struct_field_value":
+                result = FormatStructFieldValue(node, indentLevel);
+                return true;
+            case "old_type":
+                result = node.Text;
+                return true;
+            case "dimension":
+                result = _layout.Options.SpaceInArrayBrackets ? "[ ]" : "[]";
+                return true;
+            case "array_type":
+                result = FormatArrayType(node);
+                return true;
+            case "any_type":
+            case "variable_storage_class":
+            case "old_builtin_type":
+            case "function":
+            case "public":
+            case "const":
             case "static":
             case "native":
             case "property":
@@ -1043,7 +1092,7 @@ public sealed class AstPrinter
                 continue;
             }
 
-            if (signature.EndsWith("~") || signature.EndsWith("= "))
+            if (signature.EndsWith("~") || signature.EndsWith("= ") || signature.EndsWith(':'))
             {
                 signature += part;
                 continue;
@@ -1142,6 +1191,372 @@ public sealed class AstPrinter
             return signature + " " + FormatBlockCompact(body);
 
         return signature + _layout.Options.LineEnding + _formatChild(body, indentLevel);
+    }
+
+    private string FormatTypedef(Node node, int indentLevel)
+    {
+        var name = "";
+        string? expression = null;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "typedef":
+                case "=":
+                case ";":
+                    break;
+                case "identifier":
+                    name = _formatChild(child, 0);
+                    break;
+                case "typedef_expression":
+                    expression = FormatTypedefExpression(child, 0);
+                    break;
+            }
+        }
+
+        return _layout.Indent(indentLevel) + "typedef " + name + " = " + (expression ?? "") + ";";
+    }
+
+    private string FormatTypedefExpression(Node node, int indentLevel)
+    {
+        var typeAndDims = new List<string>();
+        string? parameters = null;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "(":
+                case ")":
+                case "function":
+                    break;
+                case "type":
+                case "dimension":
+                case "fixed_dimension":
+                    var part = _formatChild(child, 0);
+                    if (!string.IsNullOrEmpty(part))
+                        typeAndDims.Add(part);
+                    break;
+                case "parameter_declarations":
+                    parameters = _formatChild(child, 0);
+                    break;
+            }
+        }
+
+        var returnType = _layout.JoinDeclarationParts(typeAndDims);
+        var signature = "function " + returnType;
+        if (parameters != null)
+        {
+            if (_layout.Options.SpaceBeforeOpenParen)
+                signature += " ";
+            signature += parameters;
+        }
+
+        return _layout.Indent(indentLevel) + signature;
+    }
+
+    private string FormatTypeset(Node node, int indentLevel)
+    {
+        var name = "";
+        var members = new List<string>();
+        var inBody = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "typeset":
+                case ";":
+                    break;
+                case "identifier":
+                    if (!inBody)
+                        name = _formatChild(child, 0);
+                    break;
+                case "{":
+                    inBody = true;
+                    break;
+                case "}":
+                    break;
+                case "typedef_expression":
+                    members.Add(FormatTypedefExpression(child, indentLevel + 1) + ";");
+                    break;
+                default:
+                    if (!inBody)
+                        break;
+                    var member = _formatChild(child, indentLevel + 1);
+                    if (!string.IsNullOrWhiteSpace(member))
+                        members.Add(member);
+                    break;
+            }
+        }
+
+        var header = _layout.Indent(indentLevel) + "typeset " + name;
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            return header + " { " + inner + " };";
+        }
+
+        var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(members);
+        lines.Add(_layout.Indent(indentLevel) + "};");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatFunctag(Node node, int indentLevel)
+    {
+        var parts = new List<string> { "functag" };
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "functag" or ";")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(parts) + ";";
+    }
+
+    private string FormatFuncenum(Node node, int indentLevel)
+    {
+        var name = "";
+        var members = new List<string>();
+        var inBody = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "funcenum":
+                case ";":
+                case ",":
+                    break;
+                case "identifier":
+                    if (!inBody)
+                        name = _formatChild(child, 0);
+                    break;
+                case "{":
+                    inBody = true;
+                    break;
+                case "}":
+                    break;
+                case "funcenum_member":
+                    members.Add(FormatFuncenumMember(child, indentLevel + 1) + ",");
+                    break;
+                default:
+                    if (!inBody)
+                        break;
+                    var member = _formatChild(child, indentLevel + 1);
+                    if (!string.IsNullOrWhiteSpace(member))
+                        members.Add(member);
+                    break;
+            }
+        }
+
+        var header = _layout.Indent(indentLevel) + "funcenum " + name;
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            return header + " { " + inner + " };";
+        }
+
+        var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(members);
+        lines.Add(_layout.Indent(indentLevel) + "};");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatFuncenumMember(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(parts);
+    }
+
+    private string FormatStruct(Node node, int indentLevel)
+    {
+        var name = "";
+        var members = new List<string>();
+        var inBody = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "struct":
+                case ";":
+                case ",":
+                    break;
+                case "identifier":
+                    if (!inBody)
+                        name = _formatChild(child, 0);
+                    break;
+                case "{":
+                    inBody = true;
+                    break;
+                case "}":
+                    break;
+                default:
+                    if (!inBody)
+                        break;
+                    var member = _formatChild(child, indentLevel + 1);
+                    if (!string.IsNullOrWhiteSpace(member))
+                        members.Add(member);
+                    break;
+            }
+        }
+
+        var header = _layout.Indent(indentLevel) + "struct " + name;
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            return header + " { " + inner + " };";
+        }
+
+        var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(members);
+        lines.Add(_layout.Indent(indentLevel) + "};");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatStructField(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type is ";" or ",")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var joined = _layout.JoinDeclarationParts(parts);
+        if (node.Type == "struct_field" && !joined.EndsWith(';'))
+            joined += ";";
+
+        return _layout.Indent(indentLevel) + joined;
+    }
+
+    private string FormatStructDeclaration(Node node, int indentLevel)
+    {
+        var headerParts = new List<string>();
+        string? constructor = null;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "=":
+                case ";":
+                    break;
+                case "struct_constructor":
+                    constructor = FormatStructConstructor(child, indentLevel);
+                    break;
+                case ":":
+                    // Old-style `Type:name` keeps the colon glued to the type.
+                    if (headerParts.Count > 0)
+                        headerParts[^1] = headerParts[^1] + ":";
+                    break;
+                default:
+                    var part = _formatChild(child, 0);
+                    if (!string.IsNullOrEmpty(part))
+                        headerParts.Add(part);
+                    break;
+            }
+        }
+
+        var header = _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(headerParts) + " =";
+        if (constructor == null)
+            return header + ";";
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+            return header + " " + constructor.TrimStart();
+
+        return header + _layout.Options.LineEnding + constructor;
+    }
+
+    private string FormatStructConstructor(Node node, int indentLevel)
+    {
+        var fields = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "{" or "}" or "," or ";")
+                continue;
+
+            var field = _formatChild(child, indentLevel + 1);
+            if (!string.IsNullOrWhiteSpace(field))
+                fields.Add(field);
+        }
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = _layout.JoinComma(fields.Select(f => f.Trim().TrimEnd(',')));
+            return "{ " + inner + " };";
+        }
+
+        var lines = new List<string> { _layout.Indent(indentLevel) + "{" };
+        foreach (var field in fields)
+        {
+            var line = field.TrimEnd();
+            if (!line.EndsWith(','))
+                line += ",";
+            lines.Add(line);
+        }
+
+        lines.Add(_layout.Indent(indentLevel) + "};");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatStructFieldValue(Node node, int indentLevel)
+    {
+        var field = "";
+        string? value = null;
+        var sawEquals = false;
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type == "=")
+            {
+                sawEquals = true;
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (string.IsNullOrEmpty(formatted))
+                continue;
+
+            if (!sawEquals)
+                field = formatted;
+            else
+                value = formatted;
+        }
+
+        var assignment = field + (_layout.Options.SpaceAroundOperators ? " = " : "=") + (value ?? "");
+        return _layout.Indent(indentLevel) + assignment;
+    }
+
+    private string FormatArrayType(Node node)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.JoinDeclarationParts(parts);
     }
 
     private string FormatSourceFile(Node node, int indentLevel)

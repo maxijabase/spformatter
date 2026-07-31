@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 316
+- Passed: 327
 - Failed: 0
 - Skipped: 0
-- Total: 316
+- Total: 327
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -49,6 +49,11 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | blank lines inside blocks | Partial | AST does not retain intra-block blanks; PreserveEmptyLines/MaxConsecutive apply to printer-emitted blanks |
 | methodmap | Supported | `AstPrinter`; inheritance spacing, natives/aliases/methods/properties; trailing `;` on methodmap only |
 | enum_struct | Supported | `AstPrinter`; fields + methods; brace layout matches STYLE |
+| typedef / typedef_expression | Supported | `AstPrinter`; strips optional outer parens; reuses parameter printers |
+| typeset | Supported | `AstPrinter`; member `typedef_expression`s; brace layout matches STYLE |
+| functag | Supported | `AstPrinter`; `old_type` prints as `Tag:` without spaces around `:` |
+| funcenum | Supported | `AstPrinter`; members keep trailing commas; brace layout matches STYLE |
+| struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; trailing `;` |
 
 ## Unhandled / default path
 

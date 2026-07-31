@@ -84,6 +84,17 @@ public sealed class LayoutRules
             {
                 result.Append(current);
             }
+            else if (previous.EndsWith(':'))
+            {
+                // Old-type tags keep the colon glued: Handle:x, not Handle : x / Handle: x.
+                result.Append(current);
+            }
+            else if (current.StartsWith('('))
+            {
+                if (_options.SpaceBeforeOpenParen)
+                    result.Append(' ');
+                result.Append(current);
+            }
             else if (IsCompoundOperatorFragment(previous, current))
             {
                 result.Append(current);

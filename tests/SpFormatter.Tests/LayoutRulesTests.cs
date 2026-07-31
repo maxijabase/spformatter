@@ -50,4 +50,12 @@ public class LayoutRulesTests
         var rules = new LayoutRules(new FormattingOptions { SpaceAfterComma = false });
         rules.JoinDeclarationParts(new[] { "int", "a", ",", "b" }).Should().Be("int a,b");
     }
+
+    [Fact]
+    public void JoinDeclarationParts_keeps_old_type_colon_glued()
+    {
+        var rules = new LayoutRules(FormattingOptions.Default);
+        rules.JoinDeclarationParts(new[] { "Handle:", "x" }).Should().Be("Handle:x");
+        rules.JoinDeclarationParts(new[] { "Action:", "public", "(args)" }).Should().Be("Action:public(args)");
+    }
 }

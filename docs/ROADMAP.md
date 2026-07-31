@@ -204,8 +204,10 @@ Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chu
 
 ### Step 18. Typedef / typeset / functag / funcenum / struct
 
-- Status: `Todo`
+- Status: `Done`
 - Mirror SPFormat writers; reuse parameter/type printers
+- Goldens under Typedefs / Typesets / Functags / Funcenums / Structs
+- `old_type` text path + `JoinDeclarationParts` colon glue (broader old-variable colon work remains Step 19)
 
 ### Step 19. Old-type colon spacing
 
