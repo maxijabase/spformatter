@@ -54,6 +54,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Blocks (incl. compact) | AstPrinter; NewLineAfterOpenBrace for function bodies |
 | Expression / break / continue / return | AstPrinter; RequireSemicolons preserved |
 | If / else | AstPrinter; no bare-if brace injection; bool_literal conditions |
+| For / while | AstPrinter; bare bodies preserved; empty for(;;) |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -101,7 +102,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 6. For and while
 
-- Status: `Todo`
+- Status: `Done`
 - Move `for_statement` and `while_statement` into `AstPrinter`
 - SpaceBeforeOpenParen and semicolon spacing in for-headers via LayoutRules
 - No structure rewrite beyond spacing/indent

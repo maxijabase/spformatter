@@ -145,12 +145,6 @@ public class SourcePawnFormatter : IDisposable
             case "function_definition":
                 return FormatFunctionDefinition(node, indentLevel, originalSource);
             
-            case "for_statement":
-                return FormatForStatement(node, indentLevel);
-            
-            case "while_statement":
-                return FormatWhileStatement(node, indentLevel);
-            
             case "switch_statement":
                 return FormatSwitchStatement(node, indentLevel);
             
@@ -540,109 +534,6 @@ public class SourcePawnFormatter : IDisposable
         return result;
     }
 
-    private string FormatForStatement(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var result = new List<string>();
-        
-        Node? initialization = null, condition = null, increment = null, body = null;
-        
-        foreach (var child in node.Children)
-        {
-            switch (child.Type)
-            {
-                case "variable_declaration_statement":
-                case "variable_declaration":
-                case "assignment_expression":
-                    if (initialization == null) initialization = child;
-                    break;
-                case "binary_expression":
-                case "call_expression":
-                case "identifier":
-                    if (condition == null) condition = child;
-                    break;
-                case "update_expression":
-                case "assignment_statement":
-                    if (increment == null) increment = child;
-                    break;
-                case "block":
-                    body = child;
-                    break;
-            }
-        }
-        
-        // Build for statement: for(init; condition; increment) or for (init; condition; increment) based on SpaceBeforeOpenParen option
-        var space = _options.SpaceBeforeOpenParen ? " " : "";
-        var forLine = currentIndent + "for" + space + "(";
-        
-        if (initialization != null) forLine += FormatNode(initialization, 0).TrimEnd(';');
-        forLine += "; ";
-        if (condition != null) forLine += FormatNode(condition, 0);
-        forLine += "; ";
-        if (increment != null) forLine += FormatNode(increment, 0);
-        forLine += ")";
-        
-        result.Add(forLine);
-        
-        if (body != null)
-        {
-            if (_options.NewLineAfterOpenBrace)
-            {
-                result.Add(FormatNode(body, indentLevel));
-            }
-            else
-            {
-                result[^1] += " " + FormatNode(body, indentLevel).Trim();
-            }
-        }
-        
-        return string.Join(_options.LineEnding, result);
-    }
-    
-    private string FormatWhileStatement(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var result = new List<string>();
-        
-        Node? condition = null, body = null;
-        
-        foreach (var child in node.Children)
-        {
-            switch (child.Type)
-            {
-                case "binary_expression":
-                case "call_expression":
-                case "identifier":
-                    if (condition == null) condition = child;
-                    break;
-                case "block":
-                    body = child;
-                    break;
-            }
-        }
-        
-        // Format: while(condition) or while (condition) based on SpaceBeforeOpenParen option
-        var space = _options.SpaceBeforeOpenParen ? " " : "";
-        var whileLine = currentIndent + "while" + space;
-        whileLine += "(" + (condition != null ? FormatNode(condition, 0) : "") + ")";
-        
-        result.Add(whileLine);
-        
-        if (body != null)
-        {
-            if (_options.NewLineAfterOpenBrace)
-            {
-                result.Add(FormatNode(body, indentLevel));
-            }
-            else
-            {
-                result[^1] += " " + FormatNode(body, indentLevel).Trim();
-            }
-        }
-        
-        return string.Join(_options.LineEnding, result);
-    }
-    
     private bool IsOperator(string nodeType)
     {
         return _layout.IsBinaryOrAssignmentOperator(nodeType);

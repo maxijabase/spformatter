@@ -43,6 +43,8 @@ public sealed class AstPrinter
             case "string_literal":
             case "character_literal":
             case "number_literal":
+            case "int_literal":
+            case "float_literal":
             case "bool_literal":
             case "identifier":
             case "builtin_type":
@@ -103,6 +105,12 @@ public sealed class AstPrinter
                 return true;
             case "condition_statement":
                 result = FormatConditionStatement(node, indentLevel);
+                return true;
+            case "for_statement":
+                result = FormatForStatement(node, indentLevel);
+                return true;
+            case "while_statement":
+                result = FormatWhileStatement(node, indentLevel);
                 return true;
             default:
                 result = string.Empty;
@@ -451,6 +459,114 @@ public sealed class AstPrinter
         }
 
         lines.Add(_formatChild(body, indentLevel + 1));
+    }
+
+    private string FormatForStatement(Node node, int indentLevel)
+    {
+        Node? initialization = null;
+        Node? condition = null;
+        Node? increment = null;
+        Node? body = null;
+        var inParens = false;
+        var slot = 0;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "for":
+                    continue;
+                case "(":
+                    inParens = true;
+                    slot = 0;
+                    continue;
+                case ")":
+                    inParens = false;
+                    continue;
+                case ";":
+                    if (inParens)
+                        slot++;
+                    continue;
+            }
+
+            if (inParens)
+            {
+                switch (slot)
+                {
+                    case 0:
+                        initialization ??= child;
+                        break;
+                    case 1:
+                        condition ??= child;
+                        break;
+                    case 2:
+                        increment ??= child;
+                        break;
+                }
+                continue;
+            }
+
+            body ??= child;
+        }
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var initText = initialization != null ? _formatChild(initialization, 0).TrimEnd(';') : "";
+        var condText = condition != null ? _formatChild(condition, 0) : "";
+        var incrText = increment != null ? _formatChild(increment, 0) : "";
+
+        var lines = new List<string>
+        {
+            indent + "for" + space + "("
+                + initText
+                + ";"
+                + (condText.Length > 0 ? " " + condText : "")
+                + ";"
+                + (incrText.Length > 0 ? " " + incrText : "")
+                + ")"
+        };
+        AppendControlBody(lines, body, indentLevel);
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatWhileStatement(Node node, int indentLevel)
+    {
+        Node? condition = null;
+        Node? body = null;
+        var inParens = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "while":
+                    continue;
+                case "(":
+                    inParens = true;
+                    continue;
+                case ")":
+                    inParens = false;
+                    continue;
+            }
+
+            if (inParens)
+            {
+                condition ??= child;
+                continue;
+            }
+
+            body ??= child;
+        }
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var conditionText = condition != null ? _formatChild(condition, 0) : "";
+        var lines = new List<string>
+        {
+            indent + "while" + space + "(" + conditionText + ")"
+        };
+        AppendControlBody(lines, body, indentLevel);
+        return string.Join(_layout.Options.LineEnding, lines);
     }
 
     private string FormatFunctionDeclaration(Node node, int indentLevel)

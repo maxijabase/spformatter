@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 280
+- Passed: 285
 - Failed: 0
 - Skipped: 5
-- Total: 285
+- Total: 290
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -32,7 +32,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparsed control/call shapes still use legacy fallbacks |
 | native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
 | if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; no brace injection |
-| for / while | Partial | |
+| for / while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing |
 | switch / case | Partial | |
 | return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored |
 | expression statements | Supported | `AstPrinter`; does not drop present semicolons |
