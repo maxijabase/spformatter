@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 252
+- Passed: 253
 - Failed: 0
 - Skipped: 6
-- Total: 258
+- Total: 259
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -28,7 +28,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | binary / unary / update expressions | Supported | `AstPrinter` + `LayoutRules` (legacy regex helpers may still touch unknown paths) |
 | assignment | Supported | `AstPrinter` |
 | call expressions / args | Partial | call nodes in `AstPrinter`; `call_arguments` still legacy |
-| variable declarations (local / global / old-style) | Partial | |
+| variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts`; array dimensions still format via legacy `FormatArrayAccess` when present |
 | function definitions / declarations | Partial | includes misparse fallbacks for control structures |
 | native declarations | Partial | |
 | if / else | Partial | syntax-only tests common; brace injection exists |

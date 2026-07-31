@@ -10,10 +10,10 @@ dotnet test SpFormatter.slnx --verbosity minimal
 
 | Metric | Count |
 |---|---|
-| Passed | 252 |
+| Passed | 253 |
 | Failed | 0 |
 | Skipped | 6 |
-| Total | 258 |
+| Total | 259 |
 
 Skipped items are a few legacy option goldens that expect compact one-liners the printer no longer preserves.
 

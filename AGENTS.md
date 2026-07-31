@@ -11,7 +11,7 @@ SourcePawn formatter for .NET. Parse with Tree-sitter, print with a pretty-print
 
 ## Current phase
 
-Expression printing lives in `AstPrinter` + `LayoutRules`. Next construct to migrate: variable declarations.
+Variable declarations and expressions route through `AstPrinter` + `LayoutRules`. Next construct candidates: `call_arguments`, then simple functions/natives.
 
 Printer is still partly the legacy god class in `src/SpFormatter/SourcePawnFormatter.cs`. New work should keep moving constructs into `AstPrinter` + `LayoutRules` + `FormatResult`.
 

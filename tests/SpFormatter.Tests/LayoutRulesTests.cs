@@ -36,12 +36,18 @@ public class LayoutRulesTests
     }
 
     [Fact]
-    public void ArrayAccess_respects_bracket_spacing()
+    public void JoinDeclarationParts_spaces_words_and_commas()
     {
-        var tight = new LayoutRules(new FormattingOptions { SpaceInArrayBrackets = false });
-        tight.ArrayAccess("buf", "0").Should().Be("buf[0]");
+        var rules = new LayoutRules(new FormattingOptions { SpaceAfterComma = true, SpaceAroundOperators = true });
+        rules.JoinDeclarationParts(new[] { "int", "a", ",", "b" }).Should().Be("int a, b");
+        rules.JoinDeclarationParts(new[] { "int", "x", " = ", "5" }).Should().Be("int x = 5");
+        rules.JoinDeclarationParts(new[] { "char", "buffer", "[256]" }).Should().Be("char buffer[256]");
+    }
 
-        var spaced = new LayoutRules(new FormattingOptions { SpaceInArrayBrackets = true });
-        spaced.ArrayAccess("buf", "0").Should().Be("buf[ 0 ]");
+    [Fact]
+    public void JoinDeclarationParts_respects_no_space_after_comma()
+    {
+        var rules = new LayoutRules(new FormattingOptions { SpaceAfterComma = false });
+        rules.JoinDeclarationParts(new[] { "int", "a", ",", "b" }).Should().Be("int a,b");
     }
 }

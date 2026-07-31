@@ -172,12 +172,6 @@ public class SourcePawnFormatter : IDisposable
             case "switch_case":
                 return FormatSwitchCase(node, indentLevel);
             
-            case "variable_declaration":
-            case "declaration_statement":
-            case "global_variable_declaration":
-            case "variable_declaration_statement":
-                return FormatVariableDeclaration(node, indentLevel);
-            
             case "break_statement":
             case "continue_statement":
                 return FormatBreakContinueStatement(node, indentLevel);
@@ -194,10 +188,6 @@ public class SourcePawnFormatter : IDisposable
             case "line_comment":
             case "block_comment":
                 return FormatComment(node, indentLevel);
-            
-            case "old_global_variable_declaration":
-            case "old_variable_declaration":
-                return FormatVariableDeclaration(node, indentLevel);
             
             case "preproc_include":
             case "preproc_define":
@@ -1006,121 +996,6 @@ public class SourcePawnFormatter : IDisposable
         }
         
         return string.Join(_options.LineEnding, result);
-    }
-    
-    private string FormatVariableDeclaration(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var parts = new List<string>();
-
-        foreach (var child in node.Children)
-        {
-            if (child.Type == ";")
-            {
-                // Don't add the semicolon to parts - we'll add it at the end
-            }
-            else if (child.Type == "variable_declaration")
-            {
-                // For individual variable_declaration nodes within a global_variable_declaration,
-                // format them without adding semicolons
-                var formatted = FormatVariableDeclarationChild(child);
-                if (!string.IsNullOrEmpty(formatted))
-                {
-                    parts.Add(formatted);
-                }
-            }
-            else
-            {
-                var formatted = FormatNode(child, 0);
-                if (!string.IsNullOrEmpty(formatted))
-                {
-                    parts.Add(formatted);
-                }
-            }
-        }
-
-        // Smart joining: handle commas specially for declaration lists
-        var result = new StringBuilder();
-        for (int i = 0; i < parts.Count; i++)
-        {
-            if (i > 0)
-            {
-                // Add comma without spaces, or space for other tokens
-                if (parts[i] == ",")
-                {
-                    result.Append(",");
-                }
-                else if (parts[i-1] == ",")
-                {
-                    result.Append(" " + parts[i]);
-                }
-                // Don't add space before array dimensions
-                else if (parts[i].StartsWith("["))
-                {
-                    result.Append(parts[i]);
-                }
-                // Handle multi-character operators: no spaces inside them
-                else if ((parts[i-1] == "=" && parts[i] == "=") ||     // ==
-                         (parts[i-1] == "!" && parts[i] == "=") ||     // !=
-                         (parts[i-1] == "<" && parts[i] == "=") ||     // <=
-                         (parts[i-1] == ">" && parts[i] == "=") ||     // >=
-                         (parts[i-1] == "+" && parts[i] == "=") ||     // +=
-                         (parts[i-1] == "-" && parts[i] == "=") ||     // -=
-                         (parts[i-1] == "*" && parts[i] == "=") ||     // *=
-                         (parts[i-1] == "/" && parts[i] == "=") ||     // /=
-                         (parts[i-1] == "%" && parts[i] == "=") ||     // %=
-                         (parts[i-1] == "&" && parts[i] == "&") ||     // &&
-                         (parts[i-1] == "|" && parts[i] == "|") ||     // ||
-                         (parts[i-1] == "&" && parts[i] == "=") ||     // &=
-                         (parts[i-1] == "|" && parts[i] == "=") ||     // |=
-                         (parts[i-1] == "^" && parts[i] == "=") ||     // ^=
-                         (parts[i-1] == "<" && parts[i] == "<") ||     // <<
-                         (parts[i-1] == ">" && parts[i] == ">") ||     // >>
-                         (parts[i-1] == "+" && parts[i] == "+") ||     // ++
-                         (parts[i-1] == "-" && parts[i] == "-"))       // --
-                {
-                    result.Append(parts[i]);
-                }
-                else
-                {
-                    result.Append(" " + parts[i]);
-                }
-            }
-            else
-            {
-                result.Append(parts[i]);
-            }
-        }
-
-        var joined = result.ToString();
-
-        // Post-process to add spaces around complete binary operators
-        joined = AddSpacesAroundBinaryOperators(joined);
-
-        // Add semicolon based on RequireSemicolons option
-        if (_options.RequireSemicolons && !joined.EndsWith(";"))
-        {
-            joined += ";";
-        }
-
-        return currentIndent + joined;
-    }
-
-    private string FormatVariableDeclarationChild(Node node)
-    {
-        // Format individual variable declaration without adding semicolons
-        var parts = new List<string>();
-
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-            {
-                parts.Add(formatted);
-            }
-        }
-
-        return string.Join("", parts);
     }
     
     private string FormatBreakContinueStatement(Node node, int indentLevel)

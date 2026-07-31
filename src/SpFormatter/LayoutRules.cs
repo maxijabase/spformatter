@@ -46,4 +46,87 @@ public sealed class LayoutRules
             or "==" or "!=" or "<" or ">" or "<=" or ">="
             or "&&" or "||"
             or "&" or "|" or "^" or "<<" or ">>";
+
+    /// <summary>
+    /// Joins declaration tokens: spaces between words, comma policy, no space before '['.
+    /// Operator tokens should already include spacing from <see cref="FormatAssignmentOperator"/>.
+    /// </summary>
+    public string JoinDeclarationParts(IReadOnlyList<string> parts)
+    {
+        if (parts.Count == 0)
+            return string.Empty;
+
+        var result = new System.Text.StringBuilder();
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var current = parts[i];
+            if (i == 0)
+            {
+                result.Append(current);
+                continue;
+            }
+
+            var previous = parts[i - 1];
+
+            if (current == ",")
+            {
+                result.Append(",");
+            }
+            else if (previous == ",")
+            {
+                result.Append(_options.SpaceAfterComma ? " " + current : current);
+            }
+            else if (current.StartsWith('['))
+            {
+                result.Append(current);
+            }
+            else if (IsCompoundOperatorFragment(previous, current))
+            {
+                result.Append(current);
+            }
+            else if (StartsWithOperatorSpacing(current) || EndsWithOperatorSpacing(previous))
+            {
+                result.Append(current);
+            }
+            else
+            {
+                result.Append(' ');
+                result.Append(current);
+            }
+        }
+
+        return result.ToString();
+    }
+
+    private static bool StartsWithOperatorSpacing(string text) =>
+        text.StartsWith(' ') || text.StartsWith('=') || text.StartsWith('+') || text.StartsWith('-')
+        || text.StartsWith('*') || text.StartsWith('/') || text.StartsWith('%')
+        || text.StartsWith('<') || text.StartsWith('>') || text.StartsWith('!')
+        || text.StartsWith('&') || text.StartsWith('|') || text.StartsWith('^');
+
+    private static bool EndsWithOperatorSpacing(string text) =>
+        text.EndsWith(' ') || text.EndsWith('=') || text.EndsWith('+') || text.EndsWith('-')
+        || text.EndsWith('*') || text.EndsWith('/') || text.EndsWith('%')
+        || text.EndsWith('<') || text.EndsWith('>') || text.EndsWith('!')
+        || text.EndsWith('&') || text.EndsWith('|') || text.EndsWith('^');
+
+    private static bool IsCompoundOperatorFragment(string previous, string current) =>
+        (previous == "=" && current == "=") ||
+        (previous == "!" && current == "=") ||
+        (previous == "<" && current == "=") ||
+        (previous == ">" && current == "=") ||
+        (previous == "+" && current == "=") ||
+        (previous == "-" && current == "=") ||
+        (previous == "*" && current == "=") ||
+        (previous == "/" && current == "=") ||
+        (previous == "%" && current == "=") ||
+        (previous == "&" && current == "&") ||
+        (previous == "|" && current == "|") ||
+        (previous == "&" && current == "=") ||
+        (previous == "|" && current == "=") ||
+        (previous == "^" && current == "=") ||
+        (previous == "<" && current == "<") ||
+        (previous == ">" && current == ">") ||
+        (previous == "+" && current == "+") ||
+        (previous == "-" && current == "-");
 }

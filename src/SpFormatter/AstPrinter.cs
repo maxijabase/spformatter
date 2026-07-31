@@ -49,10 +49,75 @@ public sealed class AstPrinter
             case "conditional_expression":
                 result = FormatTernaryExpression(node);
                 return true;
+            case "variable_declaration":
+            case "declaration_statement":
+            case "global_variable_declaration":
+            case "variable_declaration_statement":
+            case "old_global_variable_declaration":
+            case "old_variable_declaration":
+                result = FormatVariableDeclaration(node, indentLevel);
+                return true;
             default:
                 result = string.Empty;
                 return false;
         }
+    }
+
+    private string FormatVariableDeclaration(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+                continue;
+
+            if (child.Type is "variable_declaration" or "old_variable_declaration")
+            {
+                var nested = FormatVariableDeclarationInner(child);
+                if (!string.IsNullOrEmpty(nested))
+                    parts.Add(nested);
+                continue;
+            }
+
+            var formatted = FormatDeclarationChild(child);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var joined = _layout.JoinDeclarationParts(parts);
+        if (_layout.Options.RequireSemicolons && !joined.EndsWith(';'))
+            joined += ";";
+
+        return _layout.Indent(indentLevel) + joined;
+    }
+
+    private string FormatVariableDeclarationInner(Node node)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+                continue;
+
+            var formatted = FormatDeclarationChild(child);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.JoinDeclarationParts(parts);
+    }
+
+    private string FormatDeclarationChild(Node child)
+    {
+        var formatted = _formatChild(child, 0);
+        if (string.IsNullOrEmpty(formatted))
+            return string.Empty;
+
+        if (_layout.IsBinaryOrAssignmentOperator(child.Type))
+            return _layout.FormatAssignmentOperator(formatted.Trim());
+
+        return formatted;
     }
 
     private string FormatBinaryExpression(Node node)
