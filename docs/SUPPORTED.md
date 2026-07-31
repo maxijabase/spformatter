@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 335
+- Passed: 339
 - Failed: 0
 - Skipped: 0
-- Total: 335
+- Total: 339
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -32,7 +32,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | old_type / old_type_cast | Supported | `AstPrinter`; colon glued (`Handle:x`, `Float:0`); no spaces around `:` |
 | function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed |
 | native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
-| if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; no brace injection |
+| if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; trailing comments after `)` stay on the if line; no brace injection |
+| char_literal | Supported | `AstPrinter` prints `node.Text` (`'\0'` stays glued; was mis-typed as `character_literal`) |
 | for / while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing |
 | switch / case | Supported | `AstPrinter`; case label spacing + body blocks |
 | return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored |

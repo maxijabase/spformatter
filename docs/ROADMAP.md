@@ -234,9 +234,10 @@ Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chu
 
 ### Step 23. Clean corpus layout pass
 
-- Status: `Todo`
-- Format a handful of already-clean SM includes/plugins; fix layout quirks only
-- Do not chase ERROR-parse forms; no grammar wait
+- Status: `Done`
+- Spot-checked clean SM 1.12 includes/plugins (`handles.inc`, `float.inc`, `basecommands.sp`, …)
+- Fixed `char_literal` spacing (`'\0'`) and if trailing comments stolen as the then-body
+- Blank-line collapse inside includes remains Partial (AST does not retain intra-block blanks)
 
 ## Deferred forever unless product asks
 

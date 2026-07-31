@@ -43,6 +43,8 @@ public sealed class AstPrinter
                 return true;
             case "string_literal":
             case "character_literal":
+            case "char_literal":
+            case "escape_sequence":
             case "number_literal":
             case "int_literal":
             case "float_literal":
@@ -537,6 +539,8 @@ public sealed class AstPrinter
         Node? condition = null;
         Node? truePath = null;
         Node? falsePath = null;
+        var trailingIfComments = new List<string>();
+        var trailingElseComments = new List<string>();
         var inParens = false;
         var seenElse = false;
 
@@ -555,6 +559,20 @@ public sealed class AstPrinter
                 case "else":
                     seenElse = true;
                     continue;
+                case "comment":
+                case "line_comment":
+                case "block_comment":
+                    // Do not treat trailing comments as the if/else body.
+                    if (inParens)
+                        continue;
+                    var commentText = _formatChild(child, 0).Trim();
+                    if (string.IsNullOrEmpty(commentText))
+                        continue;
+                    if (!seenElse && truePath == null)
+                        trailingIfComments.Add(commentText);
+                    else if (seenElse && falsePath == null)
+                        trailingElseComments.Add(commentText);
+                    continue;
             }
 
             if (inParens)
@@ -572,10 +590,11 @@ public sealed class AstPrinter
         var indent = _layout.Indent(indentLevel);
         var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
         var conditionText = condition != null ? _formatChild(condition, 0) : "";
-        var lines = new List<string>
-        {
-            indent + "if" + space + "(" + conditionText + ")"
-        };
+        var ifHeader = indent + "if" + space + "(" + conditionText + ")";
+        if (trailingIfComments.Count > 0)
+            ifHeader += " " + string.Join(" ", trailingIfComments);
+
+        var lines = new List<string> { ifHeader };
 
         AppendControlBody(lines, truePath, indentLevel);
 
@@ -588,7 +607,10 @@ public sealed class AstPrinter
             }
             else
             {
-                lines.Add(indent + "else");
+                var elseHeader = indent + "else";
+                if (trailingElseComments.Count > 0)
+                    elseHeader += " " + string.Join(" ", trailingElseComments);
+                lines.Add(elseHeader);
                 AppendControlBody(lines, falsePath, indentLevel);
             }
         }
