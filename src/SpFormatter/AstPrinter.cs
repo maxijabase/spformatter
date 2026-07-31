@@ -152,6 +152,53 @@ public sealed class AstPrinter
                 }
                 result = FormatSourceFile(node, indentLevel);
                 return true;
+            case "methodmap":
+                result = FormatMethodmap(node, indentLevel);
+                return true;
+            case "methodmap_alias":
+            case "methodmap_native":
+            case "methodmap_native_constructor":
+            case "methodmap_native_destructor":
+                result = FormatMethodmapMemberDeclaration(node, indentLevel);
+                return true;
+            case "methodmap_method":
+            case "methodmap_method_constructor":
+            case "methodmap_method_destructor":
+                result = FormatMethodmapMethod(node, indentLevel);
+                return true;
+            case "methodmap_property":
+                result = FormatMethodmapProperty(node, indentLevel);
+                return true;
+            case "methodmap_property_alias":
+            case "methodmap_property_native":
+            case "methodmap_property_method":
+                result = FormatMethodmapPropertyAccessor(node, indentLevel);
+                return true;
+            case "methodmap_property_getter":
+            case "methodmap_property_setter":
+                result = FormatMethodmapPropertyAccessorSig(node);
+                return true;
+            case "methodmap_visibility":
+                result = "public";
+                return true;
+            case "enum_struct":
+                result = FormatEnumStruct(node, indentLevel);
+                return true;
+            case "enum_struct_field":
+                result = FormatEnumStructField(node, indentLevel);
+                return true;
+            case "enum_struct_method":
+                result = FormatEnumStructMethod(node, indentLevel);
+                return true;
+            case "static":
+            case "native":
+            case "property":
+            case "__nullable__":
+            case "~":
+            case "=":
+            case "<":
+                result = node.Text;
+                return true;
             default:
                 result = string.Empty;
                 return false;
@@ -732,6 +779,370 @@ public sealed class AstPrinter
     }
 
     private string FormatPreprocessor(Node node) => node.Text;
+
+    private string FormatMethodmap(Node node, int indentLevel)
+    {
+        var header = BuildMethodmapHeader(node, indentLevel);
+        var members = new List<string>();
+        var inBody = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "{":
+                    inBody = true;
+                    break;
+                case "}":
+                case ";":
+                case "methodmap":
+                case "identifier":
+                case "<":
+                case "__nullable__":
+                    break;
+                default:
+                    if (!inBody)
+                        break;
+                    var member = _formatChild(child, indentLevel + 1);
+                    if (!string.IsNullOrWhiteSpace(member))
+                        members.Add(member);
+                    break;
+            }
+        }
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            return header + " { " + inner + " };";
+        }
+
+        var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(members);
+        lines.Add(_layout.Indent(indentLevel) + "};");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string BuildMethodmapHeader(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "methodmap":
+                    parts.Add("methodmap");
+                    break;
+                case "identifier":
+                    parts.Add(_formatChild(child, 0));
+                    break;
+                case "<":
+                    parts.Add("<");
+                    break;
+                case "__nullable__":
+                    parts.Add("__nullable__");
+                    break;
+                case "{":
+                    goto done;
+            }
+        }
+
+    done:
+        var header = _layout.Indent(indentLevel);
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i];
+            if (i > 0)
+            {
+                if (part == "<")
+                    header += " < ";
+                else if (parts[i - 1] == "<")
+                    header += part;
+                else
+                    header += " " + part;
+            }
+            else
+            {
+                header += part;
+            }
+        }
+
+        return header;
+    }
+
+    private string FormatMethodmapMemberDeclaration(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+                continue;
+
+            if (child.Type == "=")
+            {
+                parts.Add("=");
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.Indent(indentLevel) + JoinMethodmapSignatureParts(parts) + ";";
+    }
+
+    private string FormatMethodmapMethod(Node node, int indentLevel)
+    {
+        Node? body = null;
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == "block")
+            {
+                body = child;
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var signature = _layout.Indent(indentLevel) + JoinMethodmapSignatureParts(parts);
+        if (body == null)
+            return signature;
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+            return signature + " " + FormatBlockCompact(body);
+
+        return signature + _layout.Options.LineEnding + _formatChild(body, indentLevel);
+    }
+
+    private string FormatMethodmapProperty(Node node, int indentLevel)
+    {
+        var headerParts = new List<string>();
+        var accessors = new List<string>();
+        var inBody = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "{":
+                    inBody = true;
+                    break;
+                case "}":
+                case ";":
+                    break;
+                default:
+                    if (!inBody)
+                    {
+                        var part = _formatChild(child, 0);
+                        if (!string.IsNullOrEmpty(part))
+                            headerParts.Add(part);
+                    }
+                    else
+                    {
+                        var accessor = _formatChild(child, indentLevel + 1);
+                        if (!string.IsNullOrWhiteSpace(accessor))
+                            accessors.Add(accessor);
+                    }
+
+                    break;
+            }
+        }
+
+        var header = _layout.Indent(indentLevel) + string.Join(" ", headerParts);
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = string.Join(" ", accessors.Select(a => a.Trim()));
+            return header + " { " + inner + " }";
+        }
+
+        var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(accessors);
+        lines.Add(_layout.Indent(indentLevel) + "}");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatMethodmapPropertyAccessor(Node node, int indentLevel)
+    {
+        Node? body = null;
+        var parts = new List<string>();
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type == "block")
+            {
+                body = child;
+                continue;
+            }
+
+            if (child.Type == ";")
+                continue;
+
+            if (child.Type == "=")
+            {
+                parts.Add("=");
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var signature = _layout.Indent(indentLevel) + JoinMethodmapSignatureParts(parts);
+        if (body != null)
+        {
+            if (!_layout.Options.NewLineAfterOpenBrace)
+                return signature + " " + FormatBlockCompact(body);
+            return signature + _layout.Options.LineEnding + _formatChild(body, indentLevel);
+        }
+
+        return signature + ";";
+    }
+
+    private string FormatMethodmapPropertyAccessorSig(Node node)
+    {
+        // Grammar shapes: get() | set(parameter_declaration)
+        if (node.Type == "methodmap_property_getter")
+            return "get()";
+
+        var param = node.Children.FirstOrDefault(c => c.Type == "parameter_declaration");
+        if (param == null)
+            return "set()";
+
+        return "set(" + _formatChild(param, 0) + ")";
+    }
+
+    private static string JoinMethodmapSignatureParts(IReadOnlyList<string> parts)
+    {
+        var signature = "";
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i];
+            if (i == 0)
+            {
+                signature = part;
+                continue;
+            }
+
+            if (part == "=")
+            {
+                signature += " = ";
+                continue;
+            }
+
+            if (part.StartsWith('(') || part == ")" || part == "~")
+            {
+                if (part == "~")
+                    signature += signature.Length > 0 && !signature.EndsWith(' ') ? " " + part : part;
+                else
+                    signature += part;
+                continue;
+            }
+
+            if (signature.EndsWith("~") || signature.EndsWith("= "))
+            {
+                signature += part;
+                continue;
+            }
+
+            signature += " " + part;
+        }
+
+        return signature;
+    }
+
+    private string FormatEnumStruct(Node node, int indentLevel)
+    {
+        var name = "";
+        var members = new List<string>();
+        var inBody = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "enum":
+                case "struct":
+                    break;
+                case "identifier":
+                    if (!inBody)
+                        name = _formatChild(child, 0);
+                    break;
+                case "{":
+                    inBody = true;
+                    break;
+                case "}":
+                    break;
+                default:
+                    if (!inBody)
+                        break;
+                    var member = _formatChild(child, indentLevel + 1);
+                    if (!string.IsNullOrWhiteSpace(member))
+                        members.Add(member);
+                    break;
+            }
+        }
+
+        var header = _layout.Indent(indentLevel) + "enum struct " + name;
+        if (!_layout.Options.NewLineAfterOpenBrace)
+        {
+            var inner = string.Join(" ", members.Select(m => m.Trim()));
+            return header + " { " + inner + " }";
+        }
+
+        var lines = new List<string> { header, _layout.Indent(indentLevel) + "{" };
+        lines.AddRange(members);
+        lines.Add(_layout.Indent(indentLevel) + "}");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatEnumStructField(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(parts) + ";";
+    }
+
+    private string FormatEnumStructMethod(Node node, int indentLevel)
+    {
+        // Same shape as a function definition without visibility.
+        Node? body = null;
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type == "block")
+            {
+                body = child;
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var signature = _layout.Indent(indentLevel) + JoinMethodmapSignatureParts(parts);
+        if (body == null)
+            return signature;
+
+        if (!_layout.Options.NewLineAfterOpenBrace)
+            return signature + " " + FormatBlockCompact(body);
+
+        return signature + _layout.Options.LineEnding + _formatChild(body, indentLevel);
+    }
 
     private string FormatSourceFile(Node node, int indentLevel)
     {

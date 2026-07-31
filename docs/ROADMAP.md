@@ -191,6 +191,28 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 - Confirm corpus `--check` still passes
 - Final commit: `close printer migration roadmap` (or similar)
 
+## Phase: SPFormat parity (post printer migration)
+
+Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chunk.
+
+### Step 17. Methodmap + enum_struct printers
+
+- Status: `Done`
+- Typed `AstPrinter` paths for methodmap members/properties and enum_struct fields/methods
+- Goldens + idempotent invariants
+- SUPPORTED.md updated
+
+### Step 18. Typedef / typeset / functag / funcenum / struct
+
+- Status: `Todo`
+- Mirror SPFormat writers; reuse parameter/type printers
+
+### Step 19. Old-type colon spacing
+
+- Status: `Todo`
+- Preserve `Tag:` without inserting spaces (`Handle:x`, not `Handle : x`)
+- Needs grammar awareness already present for `old_type`
+
 ## Deferred forever unless product asks
 
 Do not schedule these unless the user explicitly expands scope:

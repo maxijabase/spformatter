@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 302
+- Passed: 316
 - Failed: 0
 - Skipped: 0
-- Total: 302
+- Total: 316
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -47,6 +47,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | alignment options | Out of scope | options exist but unused |
 | optional semicolon removal | Out of scope | option unused; tests misleading |
 | blank lines inside blocks | Partial | AST does not retain intra-block blanks; PreserveEmptyLines/MaxConsecutive apply to printer-emitted blanks |
+| methodmap | Supported | `AstPrinter`; inheritance spacing, natives/aliases/methods/properties; trailing `;` on methodmap only |
+| enum_struct | Supported | `AstPrinter`; fields + methods; brace layout matches STYLE |
 
 ## Unhandled / default path
 
