@@ -56,6 +56,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | If / else | AstPrinter; no bare-if brace injection; bool_literal conditions |
 | For / while | AstPrinter; bare bodies preserved; empty for(;;) |
 | Switch / case | AstPrinter; multi-value case commas |
+| Comments / preprocessor | AstPrinter; SortIncludes opt-in only |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -118,7 +119,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 8. Comments
 
-- Status: `Todo`
+- Status: `Done`
 - Move line/block comments into `AstPrinter`
 - Preserve comment text. Indent only
 - Remove debug `Console.WriteLine` leftovers if still present near unknown-node handling
@@ -126,7 +127,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 9. Preprocessor and includes (print only)
 
-- Status: `Todo`
+- Status: `Done`
 - Move `preproc_*` nodes into `AstPrinter`
 - Default: preserve source order (do not silently sort includes)
 - `SortIncludes` stays opt-in only

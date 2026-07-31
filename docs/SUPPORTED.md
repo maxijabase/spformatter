@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 287
+- Passed: 292
 - Failed: 0
 - Skipped: 5
-- Total: 292
+- Total: 297
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -37,8 +37,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored |
 | expression statements | Supported | `AstPrinter`; does not drop present semicolons |
 | blocks | Supported | multiline `block` + compact via `PrintCompactBlock`; RequireSemicolons preserved |
-| includes / preprocessor | Partial | preprocessor often raw `node.Text`; sort-includes opt-in |
-| comments | Partial | |
+| includes / preprocessor | Supported | `AstPrinter` prints `node.Text`; SortIncludes remains opt-in at source_file |
+| comments | Supported | `AstPrinter`; indent only, text preserved |
 | ternary | Supported | `AstPrinter` honors `SpaceAroundOperators` |
 | arrays / indexed access | Supported | `array_access` / `array_indexed_access` / `fixed_dimension` in `AstPrinter`; `SpaceInArrayBrackets` via options |
 | expression fragments (no full file) | Legacy-only | wrapper recovery; fail-closed preferred going forward |

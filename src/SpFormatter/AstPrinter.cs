@@ -118,6 +118,23 @@ public sealed class AstPrinter
             case "switch_case":
                 result = FormatSwitchCase(node, indentLevel);
                 return true;
+            case "comment":
+            case "line_comment":
+            case "block_comment":
+                result = FormatComment(node, indentLevel);
+                return true;
+            case "preproc_include":
+            case "preproc_define":
+            case "preproc_pragma":
+            case "preproc_if":
+            case "preproc_ifdef":
+            case "preproc_ifndef":
+            case "preproc_else":
+            case "preproc_endif":
+            case "preproc_endinput":
+            case "preproc_undef":
+                result = FormatPreprocessor(node);
+                return true;
             default:
                 result = string.Empty;
                 return false;
@@ -690,6 +707,35 @@ public sealed class AstPrinter
 
         return string.Join(_layout.Options.LineEnding, lines);
     }
+
+    private string FormatComment(Node node, int indentLevel)
+    {
+        var indent = _layout.Indent(indentLevel);
+        var commentText = node.Text;
+
+        if (commentText.StartsWith("//", StringComparison.Ordinal))
+            return indent + commentText;
+
+        if (commentText.StartsWith("/*", StringComparison.Ordinal))
+        {
+            var lines = commentText.Split('\n');
+            var result = new List<string> { indent + lines[0] };
+
+            for (var i = 1; i < lines.Length; i++)
+            {
+                if (i == lines.Length - 1 && lines[i].Trim() == "*/")
+                    result.Add(indent + " */");
+                else
+                    result.Add(indent + " " + lines[i].TrimStart());
+            }
+
+            return string.Join(_layout.Options.LineEnding, result);
+        }
+
+        return indent + commentText;
+    }
+
+    private string FormatPreprocessor(Node node) => node.Text;
 
     private string FormatFunctionDeclaration(Node node, int indentLevel)
     {

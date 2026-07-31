@@ -145,19 +145,6 @@ public class SourcePawnFormatter : IDisposable
             case "function_definition":
                 return FormatFunctionDefinition(node, indentLevel, originalSource);
             
-            case "comment":
-            case "line_comment":
-            case "block_comment":
-                return FormatComment(node, indentLevel);
-            
-            case "preproc_include":
-            case "preproc_define":
-            case "preproc_pragma":
-            case "preproc_if":
-            case "preproc_ifdef":
-            case "preproc_ifndef":
-                return FormatPreprocessor(node, indentLevel);
-            
             // Punctuation - return as-is
             case "(":
             case ")":
@@ -533,58 +520,8 @@ public class SourcePawnFormatter : IDisposable
         return _layout.IsBinaryOrAssignmentOperator(nodeType);
     }
     
-    private string FormatComment(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var commentText = node.Text;
-        
-        // Handle different comment types
-        if (commentText.StartsWith("//"))
-        {
-            // Single line comment
-            return currentIndent + commentText;
-        }
-        else if (commentText.StartsWith("/*"))
-        {
-            // Multi-line comment - preserve formatting but adjust indentation
-            var lines = commentText.Split('\n');
-            var result = new List<string>();
-            
-            result.Add(currentIndent + lines[0]);
-            
-            for (int i = 1; i < lines.Length; i++)
-            {
-                if (i == lines.Length - 1 && lines[i].Trim() == "*/")
-                {
-                    result.Add(currentIndent + " */");
-                }
-                else
-                {
-                    result.Add(currentIndent + " " + lines[i].TrimStart());
-                }
-            }
-            
-            return string.Join(_options.LineEnding, result);
-        }
-        
-        return currentIndent + commentText;
-    }
-    
-    private string FormatPreprocessor(Node node, int indentLevel)
-    {
-        // Preprocessor directives typically start at column 0
-        return node.Text;
-    }
-
     private string FormatUnknownNode(Node node, int indentLevel)
     {
-        // Debug: Check if this is the problematic source_file node
-        if (node.Type == "source_file" && node.HasError && 
-            (node.Text.Contains("++") || node.Text.Contains("--")))
-        {
-            System.Console.WriteLine($"[DEBUG] FormatUnknownNode processing source_file: '{node.Text}'");
-        }
-        
         // Try to format children if it's a structural node
         if (node.Children.Count > 0 && node.IsNamed)
         {
