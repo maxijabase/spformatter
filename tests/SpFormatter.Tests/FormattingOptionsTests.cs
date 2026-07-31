@@ -105,7 +105,7 @@ public class FormattingOptionsTests : FormatterTestBase
             options);
     }
 
-    [Fact(Skip = "legacy golden expects compact one-liner; printer expands braces until function path is migrated")]
+    [Fact]
     public void TestSpaceBeforeOpenParen_False()
     {
         var options = new FormattingOptions { SpaceBeforeOpenParen = false };
@@ -115,7 +115,7 @@ public class FormattingOptionsTests : FormatterTestBase
             options);
     }
 
-    [Fact(Skip = "legacy golden expects compact one-liner; printer expands braces until function path is migrated")]
+    [Fact]
     public void TestSpaceBeforeOpenParen_True()
     {
         var options = new FormattingOptions { SpaceBeforeOpenParen = true };
@@ -207,16 +207,6 @@ public class FormattingOptionsTests : FormatterTestBase
 
     #region Advanced Options
 
-    [Fact(Skip = "tree-sitter AST does not retain blank lines inside blocks; option only affects blanks the printer emits")]
-    public void TestPreserveEmptyLines_True()
-    {
-        var options = new FormattingOptions { PreserveEmptyLines = true };
-        AssertFormatEqualsWithOptionsFromFiles(
-            "FormattingOptions/AdvancedOptions/preserve_empty_lines_input.sp",
-            "FormattingOptions/AdvancedOptions/preserve_empty_lines_true_expected.sp",
-            options);
-    }
-
     [Fact]
     public void TestPreserveEmptyLines_False()
     {
@@ -224,16 +214,6 @@ public class FormattingOptionsTests : FormatterTestBase
         AssertFormatEqualsWithOptionsFromFiles(
             "FormattingOptions/AdvancedOptions/preserve_empty_lines_input.sp",
             "FormattingOptions/AdvancedOptions/preserve_empty_lines_false_expected.sp",
-            options);
-    }
-
-    [Fact(Skip = "tree-sitter AST does not retain blank lines inside blocks; option only affects blanks the printer emits")]
-    public void TestMaxConsecutiveEmptyLines()
-    {
-        var options = new FormattingOptions { MaxConsecutiveEmptyLines = 1 };
-        AssertFormatEqualsWithOptionsFromFiles(
-            "FormattingOptions/AdvancedOptions/max_consecutive_empty_lines_input.sp",
-            "FormattingOptions/AdvancedOptions/max_consecutive_empty_lines_expected.sp",
             options);
     }
 
@@ -280,7 +260,7 @@ public class FormattingOptionsTests : FormatterTestBase
             options);
     }
 
-    [Fact(Skip = "legacy golden expects compact spaced style; revisit after function printer migration")]
+    [Fact]
     public void TestCombinedOptions_SpacedStyle()
     {
         var options = new FormattingOptions

@@ -169,7 +169,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 14. Revisit skipped option goldens
 
-- Status: `Todo`
+- Status: `Done`
 - For each `[Fact(Skip=...)]` in FormattingOptionsTests: either implement the real behavior, rewrite the golden to STYLE.md, or delete the vacuous test
 - Do not un-skip by mass-rebasing junk
 - Commit per option cluster if large

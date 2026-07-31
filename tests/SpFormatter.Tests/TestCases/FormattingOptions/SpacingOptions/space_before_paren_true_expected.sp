@@ -1,1 +1,4 @@
-void test() { PrintToChat (client, message); }
+void test ()
+{
+    PrintToChat (client, message);
+}
