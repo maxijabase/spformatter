@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 292
+- Passed: 295
 - Failed: 0
 - Skipped: 5
-- Total: 297
+- Total: 300
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -41,10 +41,12 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | comments | Supported | `AstPrinter`; indent only, text preserved |
 | ternary | Supported | `AstPrinter` honors `SpaceAroundOperators` |
 | arrays / indexed access | Supported | `array_access` / `array_indexed_access` / `fixed_dimension` in `AstPrinter`; `SpaceInArrayBrackets` via options |
+| source_file top-level order | Supported | preserves declaration order; no silent include/function bucketing |
 | expression fragments (no full file) | Legacy-only | wrapper recovery; fail-closed preferred going forward |
 | ERROR-tree recovery | Out of scope for new work | keep behind Recovery if needed later |
 | alignment options | Out of scope | options exist but unused |
 | optional semicolon removal | Out of scope | option unused; tests misleading |
+| blank lines inside blocks | Partial | AST does not retain intra-block blanks; PreserveEmptyLines/MaxConsecutive apply to printer-emitted blanks |
 
 ## Unhandled / default path
 

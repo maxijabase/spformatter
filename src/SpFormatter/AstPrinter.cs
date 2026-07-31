@@ -1,3 +1,4 @@
+using System.Linq;
 using TreeSitter;
 
 namespace SpFormatter;
@@ -134,6 +135,14 @@ public sealed class AstPrinter
             case "preproc_endinput":
             case "preproc_undef":
                 result = FormatPreprocessor(node);
+                return true;
+            case "source_file":
+                if (node.HasError)
+                {
+                    result = string.Empty;
+                    return false;
+                }
+                result = FormatSourceFile(node, indentLevel);
                 return true;
             default:
                 result = string.Empty;
@@ -736,6 +745,84 @@ public sealed class AstPrinter
     }
 
     private string FormatPreprocessor(Node node) => node.Text;
+
+    private string FormatSourceFile(Node node, int indentLevel)
+    {
+        var entries = new List<(string Type, string Text)>();
+
+        foreach (var child in node.Children)
+        {
+            var formatted = _formatChild(child, indentLevel);
+            if (string.IsNullOrWhiteSpace(formatted))
+                continue;
+            entries.Add((child.Type, formatted));
+        }
+
+        if (_layout.Options.SortIncludes)
+            SortIncludeRuns(entries);
+
+        var lines = new List<string>();
+        for (var i = 0; i < entries.Count; i++)
+        {
+            lines.Add(entries[i].Text);
+
+            var isInclude = entries[i].Type == "preproc_include";
+            var nextIsInclude = i + 1 < entries.Count && entries[i + 1].Type == "preproc_include";
+            if (isInclude && !nextIsInclude && _layout.Options.NewLineAfterInclude && i + 1 < entries.Count)
+                lines.Add("");
+        }
+
+        return CleanUpEmptyLines(string.Join(_layout.Options.LineEnding, lines));
+    }
+
+    private static void SortIncludeRuns(List<(string Type, string Text)> entries)
+    {
+        var i = 0;
+        while (i < entries.Count)
+        {
+            if (entries[i].Type != "preproc_include")
+            {
+                i++;
+                continue;
+            }
+
+            var start = i;
+            while (i < entries.Count && entries[i].Type == "preproc_include")
+                i++;
+
+            var run = entries.GetRange(start, i - start);
+            run.Sort((a, b) => string.CompareOrdinal(a.Text, b.Text));
+            for (var j = 0; j < run.Count; j++)
+                entries[start + j] = run[j];
+        }
+    }
+
+    private string CleanUpEmptyLines(string text)
+    {
+        var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
+        if (!_layout.Options.PreserveEmptyLines)
+            return string.Join(_layout.Options.LineEnding, lines.Where(l => !string.IsNullOrWhiteSpace(l)));
+
+        var result = new List<string>();
+        var consecutiveEmpty = 0;
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                consecutiveEmpty++;
+                if (consecutiveEmpty <= _layout.Options.MaxConsecutiveEmptyLines)
+                    result.Add("");
+            }
+            else
+            {
+                consecutiveEmpty = 0;
+                result.Add(line);
+            }
+        }
+
+        return string.Join(_layout.Options.LineEnding, result);
+    }
 
     private string FormatFunctionDeclaration(Node node, int indentLevel)
     {

@@ -57,6 +57,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | For / while | AstPrinter; bare bodies preserved; empty for(;;) |
 | Switch / case | AstPrinter; multi-value case commas |
 | Comments / preprocessor | AstPrinter; SortIncludes opt-in only |
+| Source file layout | AstPrinter; source order preserved; empty-line cleanup fixed |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -135,7 +136,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 10. Source file layout without silent reorder
 
-- Status: `Todo`
+- Status: `Done`
 - Move `source_file` printing into `AstPrinter` (or a dedicated file printer)
 - Preserve top-level declaration order by default
 - Remove category bucketing (includes → defs → functions) as a silent default

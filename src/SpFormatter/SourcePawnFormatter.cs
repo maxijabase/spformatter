@@ -164,13 +164,12 @@ public class SourcePawnFormatter : IDisposable
 
     private string FormatSourceFile(Node node, int indentLevel)
     {
-        // Special handling for simple prefix unary operators ONLY (++i, --i)
+        // Recovery-only path for error trees. Clean source_file is owned by AstPrinter.
         if (node.HasError && node.Children.Count == 2)
         {
             var first = node.Children[0];
             var second = node.Children[1];
             
-            // Handle prefix unary operators: ++, --, !
             if (first.Type == "ERROR" && 
                 (first.Text.Trim() == "++" || first.Text.Trim() == "--" || first.Text.Trim() == "!") &&
                 (second.Type == "old_global_variable_declaration" || second.Type == "global_variable_declaration") &&
@@ -179,138 +178,25 @@ public class SourcePawnFormatter : IDisposable
                 second.Children[0].Children.Count == 1 &&
                 Regex.IsMatch(second.Children[0].Children[0].Text.Trim(), @"^\w+$"))
             {
-                var firstFormatted = FormatNode(first, indentLevel);
-                var secondFormatted = FormatNode(second, indentLevel); 
-                
-                return firstFormatted + secondFormatted; // No space/line break between them
+                return FormatNode(first, indentLevel) + FormatNode(second, indentLevel);
             }
             
-            // Handle parenthesized expressions: ( + rest of expression
             if (first.Type == "ERROR" && first.Text.Trim() == "(" &&
                 (second.Type == "global_variable_declaration"))
             {
-                var firstFormatted = FormatNode(first, indentLevel);
-                var secondFormatted = FormatNode(second, indentLevel);
-                
-                var combined = firstFormatted + secondFormatted;
-                
-                // Apply binary operator spacing to the combined result
-                combined = AddSpacesAroundBinaryOperators(combined);
-                
-                return combined; // No space/line break between them
-            }
-        }
-        
-        var result = new List<string>();
-        var includes = new List<string>();
-        var definitions = new List<string>();
-        var functions = new List<string>();
-        var other = new List<string>();
-        
-        // Categorize top-level elements
-        foreach (var child in node.Children)
-        {
-            var formatted = FormatNode(child, indentLevel);
-            if (string.IsNullOrWhiteSpace(formatted)) continue;
-            
-            switch (child.Type)
-            {
-                case "preproc_include":
-                    includes.Add(formatted);
-                    break;
-                case "function_definition":
-                    functions.Add(formatted);
-                    break;
-                case "native_declaration":
-                case "variable_declaration":
-                case "declaration_statement":
-                    definitions.Add(formatted);
-                    break;
-                default:
-                    other.Add(formatted);
-                    break;
-            }
-        }
-        
-        // Build file structure with proper spacing
-        if (includes.Count > 0)
-        {
-            if (_options.SortIncludes)
-            {
-                includes.Sort();
-            }
-            result.AddRange(includes);
-            if (_options.NewLineAfterInclude)
-            {
-                result.Add("");
-            }
-        }
-        
-        if (definitions.Count > 0)
-        {
-            result.AddRange(definitions);
-            if (functions.Count > 0 || other.Count > 0)
-            {
-                result.Add("");
-            }
-        }
-        
-        if (other.Count > 0)
-        {
-            result.AddRange(other);
-            if (functions.Count > 0)
-            {
-                result.Add("");
-            }
-        }
-        
-        if (functions.Count > 0)
-        {
-            for (int i = 0; i < functions.Count; i++)
-            {
-                result.Add(functions[i]);
-                // Add empty line between functions (except last one)
-                if (i < functions.Count - 1)
-                {
-                    result.Add("");
-                }
-            }
-        }
-        
-        // Clean up excessive empty lines
-        return CleanUpEmptyLines(string.Join(_options.LineEnding, result));
-    }
-    
-    private string CleanUpEmptyLines(string text)
-    {
-        if (!_options.PreserveEmptyLines)
-        {
-            return text;
-        }
-        
-        // Split on different line ending types to handle cross-platform compatibility
-        var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-        var result = new List<string>();
-        int consecutiveEmpty = 0;
-        
-        foreach (var line in lines)
-        {
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                consecutiveEmpty++;
-                if (consecutiveEmpty <= _options.MaxConsecutiveEmptyLines)
-                {
-                    result.Add("");
-                }
-            }
-            else
-            {
-                consecutiveEmpty = 0;
-                result.Add(line);
+                return AddSpacesAroundBinaryOperators(FormatNode(first, indentLevel) + FormatNode(second, indentLevel));
             }
         }
 
-        return string.Join(_options.LineEnding, result);
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            var formatted = FormatNode(child, indentLevel);
+            if (!string.IsNullOrWhiteSpace(formatted))
+                parts.Add(formatted);
+        }
+
+        return string.Join(_options.LineEnding, parts);
     }
 
     private string FormatFunctionDefinition(Node node, int indentLevel, string? originalSource = null)

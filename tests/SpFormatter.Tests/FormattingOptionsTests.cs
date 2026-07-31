@@ -207,7 +207,7 @@ public class FormattingOptionsTests : FormatterTestBase
 
     #region Advanced Options
 
-    [Fact(Skip = "empty-line cleanup still legacy/buggy; revisit after printer owns top-level layout")]
+    [Fact(Skip = "tree-sitter AST does not retain blank lines inside blocks; option only affects blanks the printer emits")]
     public void TestPreserveEmptyLines_True()
     {
         var options = new FormattingOptions { PreserveEmptyLines = true };
@@ -227,7 +227,7 @@ public class FormattingOptionsTests : FormatterTestBase
             options);
     }
 
-    [Fact(Skip = "empty-line cleanup still legacy/buggy; revisit after printer owns top-level layout")]
+    [Fact(Skip = "tree-sitter AST does not retain blank lines inside blocks; option only affects blanks the printer emits")]
     public void TestMaxConsecutiveEmptyLines()
     {
         var options = new FormattingOptions { MaxConsecutiveEmptyLines = 1 };
