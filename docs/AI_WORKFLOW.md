@@ -2,16 +2,19 @@
 
 How to work on this repo with agents without recreating the thrash loop.
 
+For the full ordered backlog, use [ROADMAP.md](ROADMAP.md). Prefer roadmap steps over ad-hoc feature requests.
+
 ## Session shape
 
 1. Read `AGENTS.md` and the docs it points to.
-2. Pick one construct or one layer (for example `LayoutRules`, or `if` statements).
-3. Plan: node types, style rules from `STYLE.md`, fixtures to touch.
-4. Implement only that scope.
-5. Add / update invariants first when possible, then one golden, then edge cases.
-6. Update `SUPPORTED.md`.
-7. Commit the chunk.
-8. Stop. Do not keep going into the next construct "while you're here."
+2. If continuing migration, take the first `Todo` step in `ROADMAP.md`.
+3. Otherwise pick one construct or one layer (for example `LayoutRules`, or `if` statements).
+4. Plan: node types, style rules from `STYLE.md`, fixtures to touch.
+5. Implement only that scope.
+6. Add / update invariants first when possible, then one golden, then edge cases.
+7. Update `SUPPORTED.md` and mark the roadmap step Done.
+8. Commit the chunk.
+9. Stop, unless the user asked to run the roadmap nonstop (then continue to the next Todo, and pause only at STOP gates).
 
 ## Forbidden
 

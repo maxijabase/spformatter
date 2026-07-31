@@ -8,12 +8,13 @@ SourcePawn formatter for .NET. Parse with Tree-sitter, print with a pretty-print
 2. [docs/STYLE.md](docs/STYLE.md)
 3. [docs/SUPPORTED.md](docs/SUPPORTED.md)
 4. [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md)
+5. [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered backlog
 
 ## Current phase
 
-Expressions, calls, variables, and simple functions/natives route through `AstPrinter` + `LayoutRules`. Next construct candidates: `if` without brace rewrite, then `for` / `while` / `switch`.
+Follow [docs/ROADMAP.md](docs/ROADMAP.md). Next open step is arrays/indexed access, then blocks and control structures.
 
-Misparsed `if`/`for`/call-as-function shapes still fall back to legacy recovery. Blocks, returns, and control structures remain Partial.
+Expressions, calls, variables, and simple functions/natives already route through `AstPrinter` + `LayoutRules`. Misparsed control/call shapes still use legacy fallbacks.
 
 ## Hard stops
 

@@ -37,6 +37,7 @@ Useful flags: `--output`, `--backup` (in-place with `.bak`), `--check`, `--dir`,
 - [docs/STYLE.md](docs/STYLE.md)
 - [docs/SUPPORTED.md](docs/SUPPORTED.md)
 - [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md)
+- [docs/ROADMAP.md](docs/ROADMAP.md) ordered migration backlog
 - [AGENTS.md](AGENTS.md) for agent/session rules
 
 ## Status
