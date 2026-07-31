@@ -22,7 +22,7 @@ dotnet run --project src/SpFormatter.Cli -- plugin.sp --backup
 dotnet run --project src/SpFormatter.Cli -- plugin.sp --indent 2 --quiet
 ```
 
-Useful flags: `--output`, `--backup` (in-place with `.bak`), `--check`, `--dir`, `--indent`, `--use-tabs`, `--space-before-paren`, `--no-space-around-operators`.
+Useful flags: `--output`, `--stdin` (editor-friendly), `--backup` (in-place with `.bak`), `--check`, `--dir`, `--indent`, `--use-tabs`, `--space-before-paren`, `--no-space-around-operators`.
 
 ## Projects
 

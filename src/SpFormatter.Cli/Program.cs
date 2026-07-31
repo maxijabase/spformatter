@@ -12,6 +12,7 @@ public class Program
         bool processDirectory = false;
         bool createBackup = false;
         bool checkOnly = false;
+        bool readStdin = false;
         var inputFiles = new List<string>();
         var options = FormattingOptions.Default;
 
@@ -22,6 +23,10 @@ public class Program
                 case "--output":
                 case "-o":
                     writeSidecar = true;
+                    break;
+                case "--stdin":
+                    readStdin = true;
+                    verboseOutput = false;
                     break;
                 case "--quiet":
                 case "-q":
@@ -75,6 +80,23 @@ public class Program
                     inputFiles.Add(args[i]);
                     break;
             }
+        }
+
+        if (readStdin)
+        {
+            if (inputFiles.Count > 0)
+            {
+                Console.Error.WriteLine("error: --stdin does not take file arguments");
+                return 1;
+            }
+
+            if (writeSidecar || dryRun || createBackup || checkOnly || processDirectory)
+            {
+                Console.Error.WriteLine("error: --stdin cannot be combined with --output, --dry-run, --backup, --check, or --dir");
+                return 1;
+            }
+
+            return ProcessStdin(options);
         }
 
         if (verboseOutput)
@@ -131,6 +153,40 @@ public class Program
         }
 
         return ProcessFiles(filesToProcess, writeSidecar, verboseOutput, dryRun, createBackup, checkOnly, options);
+    }
+
+    private static int ProcessStdin(FormattingOptions options)
+    {
+        string content;
+        try
+        {
+            content = Console.In.ReadToEnd();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"error reading stdin: {ex.Message}");
+            return 1;
+        }
+
+        try
+        {
+            using var formatter = new SourcePawnFormatter(options);
+            var formatResult = formatter.FormatWithResult(content);
+            if (!formatResult.Success)
+            {
+                Console.Error.WriteLine(
+                    $"error formatting stdin: {formatResult.Errors.FirstOrDefault()?.Message}");
+                return 1;
+            }
+
+            Console.Out.Write(formatResult.Text);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"error formatting stdin: {ex.Message}");
+            return 1;
+        }
     }
 
     private static bool ProcessDefaultCode(bool verboseOutput, FormattingOptions options)
@@ -365,6 +421,7 @@ Arguments:
 
 Options:
   -o, --output         Write formatted code to [filename]_formatted.sp
+      --stdin          Read source from stdin; write formatted source to stdout
   -q, --quiet          Suppress verbose output
   -d, --dry-run        Show what would be changed without modifying files
   -b, --backup         Create .bak files and write formatted code in place
@@ -384,6 +441,7 @@ Examples:
   SpFormatter.Cli test.sp --backup
   SpFormatter.Cli src/ --dir --check
   SpFormatter.Cli plugin.sp --indent 2 --quiet
+  SpFormatter.Cli --stdin --indent 4 < plugin.sp
 """);
     }
 }

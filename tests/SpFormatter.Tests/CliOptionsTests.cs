@@ -52,7 +52,7 @@ public class CliOptionsTests : IDisposable
         File.WriteAllText(filePath, content);
     }
 
-    private string RunCli(string arguments)
+    private string RunCli(string arguments, string? stdin = null)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -61,6 +61,7 @@ public class CliOptionsTests : IDisposable
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = stdin != null,
             CreateNoWindow = true,
             WorkingDirectory = _tempDirectory
         };
@@ -68,6 +69,12 @@ public class CliOptionsTests : IDisposable
         using var process = Process.Start(startInfo);
         if (process == null)
             throw new InvalidOperationException("Failed to start CLI process");
+
+        if (stdin != null)
+        {
+            process.StandardInput.Write(stdin);
+            process.StandardInput.Close();
+        }
 
         var output = process.StandardOutput.ReadToEnd();
         var error = process.StandardError.ReadToEnd();
@@ -97,6 +104,7 @@ public class CliOptionsTests : IDisposable
         output.Should().Contain("SourcePawn Formatter");
         output.Should().Contain("Usage:");
         output.Should().Contain("--output");
+        output.Should().Contain("--stdin");
         output.Should().Contain("--quiet");
         output.Should().Contain("--dry-run");
         output.Should().Contain("--dir");
@@ -322,6 +330,27 @@ public void OnPluginStart(){PrintToServer(""Plugin started"");}";
     }
 
     #endregion
+
+    [Fact]
+    public void TestCli_Stdin_FormatsToStdout()
+    {
+        var output = RunCli("--stdin --indent 4", "int a=1;\n");
+        output.Should().Be("int a = 1;");
+    }
+
+    [Fact]
+    public void TestCli_Stdin_RejectsFileArguments()
+    {
+        try
+        {
+            RunCli("--stdin file.sp", "int a;\n");
+            true.Should().BeFalse("CLI should reject --stdin with file args");
+        }
+        catch (InvalidOperationException ex)
+        {
+            ex.Message.Should().Contain("--stdin");
+        }
+    }
 
     #region Error Handling Tests
 
