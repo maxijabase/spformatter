@@ -73,6 +73,11 @@ public sealed class UnknownNodePrinter
                 {
                     result.Append(current);
                 }
+                else if (previous.EndsWith(':'))
+                {
+                    // Old-type tags arrive as "Handle:" from AstPrinter; keep Handle:x.
+                    result.Append(current);
+                }
                 else if (current is "?" or ":")
                 {
                     result.Append(" " + current + " ");

@@ -75,7 +75,11 @@ public sealed class AstPrinter
             case "variable_declaration_statement":
             case "old_global_variable_declaration":
             case "old_variable_declaration":
+            case "old_variable_declaration_statement":
                 result = FormatVariableDeclaration(node, indentLevel);
+                return true;
+            case "old_type_cast":
+                result = FormatOldTypeCast(node);
                 return true;
             case "function_definition":
                 if (!TryFormatFunctionDefinition(node, indentLevel, out result))
@@ -225,6 +229,10 @@ public sealed class AstPrinter
                 result = FormatStructFieldValue(node, indentLevel);
                 return true;
             case "old_type":
+                // Keep Tag: glued; never emit "Tag :" / "Tag: ".
+                result = node.Text;
+                return true;
+            case "new":
                 result = node.Text;
                 return true;
             case "dimension":
@@ -1702,6 +1710,20 @@ public sealed class AstPrinter
 
     private string FormatType(Node node)
     {
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return string.Join("", parts);
+    }
+
+    private string FormatOldTypeCast(Node node)
+    {
+        // Grammar: old_type + value. Colon stays inside old_type text (Float:0).
         var parts = new List<string>();
         foreach (var child in node.Children)
         {

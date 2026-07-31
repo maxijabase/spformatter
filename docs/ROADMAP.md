@@ -211,9 +211,9 @@ Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chu
 
 ### Step 19. Old-type colon spacing
 
-- Status: `Todo`
+- Status: `Done`
 - Preserve `Tag:` without inserting spaces (`Handle:x`, not `Handle : x`)
-- Needs grammar awareness already present for `old_type`
+- `old_type` / `old_type_cast` / `old_variable_declaration_statement` in `AstPrinter`; JoinDeclarationParts + UnknownNodePrinter glue after `:`
 
 ## Deferred forever unless product asks
 
