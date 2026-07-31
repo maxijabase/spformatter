@@ -145,9 +145,6 @@ public class SourcePawnFormatter : IDisposable
             case "function_definition":
                 return FormatFunctionDefinition(node, indentLevel, originalSource);
             
-            case "condition_statement":
-                return FormatConditionStatement(node, indentLevel);
-            
             case "for_statement":
                 return FormatForStatement(node, indentLevel);
             
@@ -543,93 +540,6 @@ public class SourcePawnFormatter : IDisposable
         return result;
     }
 
-    private string FormatConditionStatement(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var result = new List<string>();
-        
-        Node? condition = null, truePath = null, falsePath = null;
-        
-        foreach (var child in node.Children)
-        {
-            switch (child.Type)
-            {
-                case "call_expression":
-                case "binary_expression":
-                case "identifier":
-                case "parenthesized_expression":
-                case "unary_expression":  // Handle !condition, ++var, --var, etc.
-                    if (condition == null) condition = child;
-                    break;
-                case "block":
-                    if (truePath == null) truePath = child;
-                    else if (falsePath == null) falsePath = child;
-                    break;
-                case "condition_statement":
-                    // Handle else if chains
-                    if (falsePath == null) falsePath = child;
-                    break;
-                case "return_statement":
-                case "expression_statement":
-                case "assignment_statement":
-                    // Handle single statements without braces
-                    if (truePath == null) truePath = child;
-                    else if (falsePath == null) falsePath = child;
-                    break;
-            }
-        }
-        
-        // Format: if(condition) or if (condition) based on SpaceBeforeOpenParen option
-        var space = _options.SpaceBeforeOpenParen ? " " : "";
-        var ifLine = currentIndent + "if" + space;
-        ifLine += "(" + (condition != null ? FormatNode(condition, 0) : "") + ")";
-        
-        result.Add(ifLine);
-        
-        if (truePath != null)
-        {
-            if (truePath.Type == "block")
-            {
-                // Handle block statements
-                if (_options.NewLineAfterOpenBrace)
-                {
-                    result.Add(FormatNode(truePath, indentLevel));
-                }
-                else
-                {
-                    result[^1] += " " + FormatNode(truePath, indentLevel).Trim();
-                }
-            }
-            else
-            {
-                // Handle single statements - wrap in block for consistency
-                result.Add(currentIndent + "{");
-                var statementFormatted = FormatNode(truePath, indentLevel + 1);
-                result.Add(statementFormatted);
-                result.Add(currentIndent + "}");
-            }
-        }
-        
-        // Handle else clause
-        if (falsePath != null)
-        {
-            if (falsePath.Type == "condition_statement")
-            {
-                // else if case
-                var elseIfFormatted = FormatConditionStatement(falsePath, indentLevel);
-                result.Add(currentIndent + "else " + elseIfFormatted.Substring(currentIndent.Length));
-            }
-            else
-            {
-                // else case
-                result.Add(currentIndent + "else");
-                result.Add(FormatNode(falsePath, indentLevel));
-            }
-        }
-        
-        return string.Join(_options.LineEnding, result);
-    }
-    
     private string FormatForStatement(Node node, int indentLevel)
     {
         var currentIndent = GetIndent(indentLevel);

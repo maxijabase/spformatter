@@ -95,7 +95,7 @@ public class FormattingOptionsTests : FormatterTestBase
             options);
     }
 
-    [Fact(Skip = "legacy golden expects single-statement if without braces rewrite; revisit with control-structure migration")]
+    [Fact]
     public void TestSpaceAroundOperators_ComparisonOperators()
     {
         var options = new FormattingOptions { SpaceAroundOperators = true };

@@ -53,6 +53,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Arrays / indexed access | AstPrinter; SpaceInArrayBrackets option |
 | Blocks (incl. compact) | AstPrinter; NewLineAfterOpenBrace for function bodies |
 | Expression / break / continue / return | AstPrinter; RequireSemicolons preserved |
+| If / else | AstPrinter; no bare-if brace injection; bool_literal conditions |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -89,7 +90,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 5. If / else without brace rewrite
 
-- Status: `Todo`
+- Status: `Done`
 - Move `condition_statement` into `AstPrinter`
 - **Do not** wrap bare single-statement bodies in braces unless STYLE.md gains an explicit option later
 - Prefer preserving source brace shape

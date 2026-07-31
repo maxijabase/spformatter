@@ -43,6 +43,7 @@ public sealed class AstPrinter
             case "string_literal":
             case "character_literal":
             case "number_literal":
+            case "bool_literal":
             case "identifier":
             case "builtin_type":
             case "visibility":
@@ -99,6 +100,9 @@ public sealed class AstPrinter
                 return true;
             case "return_statement":
                 result = FormatReturnStatement(node, indentLevel);
+                return true;
+            case "condition_statement":
+                result = FormatConditionStatement(node, indentLevel);
                 return true;
             default:
                 result = string.Empty;
@@ -366,6 +370,87 @@ public sealed class AstPrinter
         }
 
         return _layout.Indent(indentLevel) + string.Join("", parts) + ";";
+    }
+
+    private string FormatConditionStatement(Node node, int indentLevel)
+    {
+        Node? condition = null;
+        Node? truePath = null;
+        Node? falsePath = null;
+        var inParens = false;
+        var seenElse = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "if":
+                    continue;
+                case "(":
+                    inParens = true;
+                    continue;
+                case ")":
+                    inParens = false;
+                    continue;
+                case "else":
+                    seenElse = true;
+                    continue;
+            }
+
+            if (inParens)
+            {
+                condition ??= child;
+                continue;
+            }
+
+            if (!seenElse)
+                truePath ??= child;
+            else
+                falsePath ??= child;
+        }
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var conditionText = condition != null ? _formatChild(condition, 0) : "";
+        var lines = new List<string>
+        {
+            indent + "if" + space + "(" + conditionText + ")"
+        };
+
+        AppendControlBody(lines, truePath, indentLevel);
+
+        if (falsePath != null)
+        {
+            if (falsePath.Type == "condition_statement")
+            {
+                var elseIfFormatted = FormatConditionStatement(falsePath, indentLevel);
+                lines.Add(indent + "else " + elseIfFormatted[indent.Length..]);
+            }
+            else
+            {
+                lines.Add(indent + "else");
+                AppendControlBody(lines, falsePath, indentLevel);
+            }
+        }
+
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private void AppendControlBody(List<string> lines, Node? body, int indentLevel)
+    {
+        if (body == null)
+            return;
+
+        if (body.Type == "block")
+        {
+            if (_layout.Options.NewLineAfterOpenBrace)
+                lines.Add(_formatChild(body, indentLevel));
+            else
+                lines[^1] += " " + _formatChild(body, indentLevel).Trim();
+            return;
+        }
+
+        lines.Add(_formatChild(body, indentLevel + 1));
     }
 
     private string FormatFunctionDeclaration(Node node, int indentLevel)
