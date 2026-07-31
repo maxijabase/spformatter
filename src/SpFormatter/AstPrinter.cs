@@ -37,6 +37,9 @@ public sealed class AstPrinter
             case "call_expression":
                 result = FormatCallExpression(node);
                 return true;
+            case "call_arguments":
+                result = FormatCallArguments(node);
+                return true;
             case "string_literal":
             case "character_literal":
             case "number_literal":
@@ -196,6 +199,25 @@ public sealed class AstPrinter
         }
 
         return string.Join("", parts);
+    }
+
+    private string FormatCallArguments(Node node)
+    {
+        var arguments = new List<string>();
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "(" or ")" or ",")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                arguments.Add(formatted);
+        }
+
+        if (arguments.Count == 0)
+            return "()";
+
+        return "(" + _layout.JoinComma(arguments) + ")";
     }
 
     private string FormatTernaryExpression(Node node)

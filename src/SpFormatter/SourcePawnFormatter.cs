@@ -200,9 +200,6 @@ public class SourcePawnFormatter : IDisposable
             case "parameter_declarations":
                 return FormatParameterDeclarations(node);
             
-            case "call_arguments":
-                return FormatCallArguments(node);
-            
             case "type":
                 return FormatType(node);
             
@@ -855,28 +852,6 @@ public class SourcePawnFormatter : IDisposable
         }
         
         return string.Join(" ", parts);
-    }
-    
-    private string FormatCallArguments(Node node)
-    {
-        var parts = new List<string>();
-        var arguments = new List<string>();
-        
-        foreach (var child in node.Children)
-        {
-            if (child.Type != "(" && child.Type != ")" && child.Type != ",")
-            {
-                arguments.Add(FormatNode(child, 0));
-            }
-        }
-        
-        if (arguments.Count > 0)
-        {
-            var argString = string.Join(_options.SpaceAfterComma ? ", " : ",", arguments);
-            return "(" + argString + ")";
-        }
-        
-        return "()";
     }
     
     private string FormatType(Node node)
