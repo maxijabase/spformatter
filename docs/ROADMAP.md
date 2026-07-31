@@ -52,6 +52,7 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 | Simple functions / natives / params | AstPrinter; misparse fallbacks still legacy |
 | Arrays / indexed access | AstPrinter; SpaceInArrayBrackets option |
 | Blocks (incl. compact) | AstPrinter; NewLineAfterOpenBrace for function bodies |
+| Expression / break / continue / return | AstPrinter; RequireSemicolons preserved |
 | Test pyramid basics | CRLF normalize, idempotency, golden discovery, CI, corpus |
 
 ## Open steps (do in this order)
@@ -74,14 +75,14 @@ Green tests alone are not enough. Mass golden edits, new regex post-processors, 
 
 ### Step 3. Expression statements and break/continue
 
-- Status: `Todo`
+- Status: `Done`
 - Move `expression_statement`, `break_statement`, `continue_statement` into `AstPrinter`
 - Keep RequireSemicolons behavior correct (do not drop semis the way the old bug did)
 - Commit
 
 ### Step 4. Return statements
 
-- Status: `Todo`
+- Status: `Done`
 - Move `return_statement` into `AstPrinter`
 - Exact goldens under ControlStructures/ReturnStatements must stay honest to STYLE.md
 - Commit

@@ -90,6 +90,16 @@ public sealed class AstPrinter
             case "block":
                 result = FormatBlock(node, indentLevel);
                 return true;
+            case "expression_statement":
+                result = FormatExpressionStatement(node, indentLevel);
+                return true;
+            case "break_statement":
+            case "continue_statement":
+                result = FormatBreakContinueStatement(node, indentLevel);
+                return true;
+            case "return_statement":
+                result = FormatReturnStatement(node, indentLevel);
+                return true;
             default:
                 result = string.Empty;
                 return false;
@@ -294,6 +304,68 @@ public sealed class AstPrinter
             || trimmed.EndsWith("--") || trimmed.StartsWith("--"))
             return true;
         return false;
+    }
+
+    private string FormatExpressionStatement(Node node, int indentLevel)
+    {
+        var parts = new List<string>();
+        var hasSemicolon = false;
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+            {
+                hasSemicolon = true;
+                continue;
+            }
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        var joined = string.Join(" ", parts);
+        if ((hasSemicolon || _layout.Options.RequireSemicolons) && !joined.EndsWith(";"))
+            joined += ";";
+
+        return _layout.Indent(indentLevel) + joined;
+    }
+
+    private string FormatBreakContinueStatement(Node node, int indentLevel)
+    {
+        var keyword = node.Type == "break_statement" ? "break" : "continue";
+        var hasSemicolon = false;
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+            {
+                hasSemicolon = true;
+                break;
+            }
+        }
+
+        if (!hasSemicolon && node.Text.Contains(';'))
+            hasSemicolon = true;
+
+        var semi = (hasSemicolon || _layout.Options.RequireSemicolons) ? ";" : "";
+        return _layout.Indent(indentLevel) + keyword + semi;
+    }
+
+    private string FormatReturnStatement(Node node, int indentLevel)
+    {
+        var parts = new List<string> { "return" };
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type is ";" or "return")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(" " + formatted);
+        }
+
+        return _layout.Indent(indentLevel) + string.Join("", parts) + ";";
     }
 
     private string FormatFunctionDeclaration(Node node, int indentLevel)

@@ -145,14 +145,8 @@ public class SourcePawnFormatter : IDisposable
             case "function_definition":
                 return FormatFunctionDefinition(node, indentLevel, originalSource);
             
-            case "expression_statement":
-                return FormatExpressionStatement(node, indentLevel);
-            
             case "condition_statement":
                 return FormatConditionStatement(node, indentLevel);
-            
-            case "return_statement":
-                return FormatReturnStatement(node, indentLevel);
             
             case "for_statement":
                 return FormatForStatement(node, indentLevel);
@@ -165,10 +159,6 @@ public class SourcePawnFormatter : IDisposable
             
             case "switch_case":
                 return FormatSwitchCase(node, indentLevel);
-            
-            case "break_statement":
-            case "continue_statement":
-                return FormatBreakContinueStatement(node, indentLevel);
             
             case "comment":
             case "line_comment":
@@ -553,34 +543,6 @@ public class SourcePawnFormatter : IDisposable
         return result;
     }
 
-    private string FormatExpressionStatement(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var parts = new List<string>();
-        bool hasSemicolon = false;
-        
-        foreach (var child in node.Children)
-        {
-            if (child.Type == ";")
-            {
-                hasSemicolon = true;
-            }
-            else
-            {
-                parts.Add(FormatNode(child, 0));
-            }
-        }
-        
-        var joined = string.Join(" ", parts);
-
-        if ((hasSemicolon || _options.RequireSemicolons) && !joined.EndsWith(";"))
-        {
-            joined += ";";
-        }
-
-        return currentIndent + joined;
-    }
-    
     private string FormatConditionStatement(Node node, int indentLevel)
     {
         var currentIndent = GetIndent(indentLevel);
@@ -666,22 +628,6 @@ public class SourcePawnFormatter : IDisposable
         }
         
         return string.Join(_options.LineEnding, result);
-    }
-    
-    private string FormatReturnStatement(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        var parts = new List<string> { "return" };
-        
-        foreach (var child in node.Children)
-        {
-            if (child.Type != ";" && child.Type != "return")
-            {
-                parts.Add(" " + FormatNode(child, 0));
-            }
-        }
-        
-        return currentIndent + string.Join("", parts) + ";";
     }
     
     private string FormatForStatement(Node node, int indentLevel)
@@ -785,12 +731,6 @@ public class SourcePawnFormatter : IDisposable
         }
         
         return string.Join(_options.LineEnding, result);
-    }
-    
-    private string FormatBreakContinueStatement(Node node, int indentLevel)
-    {
-        var currentIndent = GetIndent(indentLevel);
-        return currentIndent + node.Text.Trim();
     }
     
     private bool IsOperator(string nodeType)

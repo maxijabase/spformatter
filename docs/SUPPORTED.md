@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 265
+- Passed: 272
 - Failed: 0
 - Skipped: 6
-- Total: 271
+- Total: 278
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -34,7 +34,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | if / else | Partial | syntax-only tests common; brace injection exists |
 | for / while | Partial | |
 | switch / case | Partial | |
-| return / break / continue | Partial | |
+| return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored |
+| expression statements | Supported | `AstPrinter`; does not drop present semicolons |
 | blocks | Supported | multiline `block` + compact via `PrintCompactBlock`; RequireSemicolons preserved |
 | includes / preprocessor | Partial | preprocessor often raw `node.Text`; sort-includes opt-in |
 | comments | Partial | |
