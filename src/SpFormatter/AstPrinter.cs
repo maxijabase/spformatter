@@ -867,7 +867,9 @@ public sealed class AstPrinter
     private string FormatComment(Node node, int indentLevel)
     {
         var indent = _layout.Indent(indentLevel);
-        var commentText = node.Text;
+        // Tree-sitter often keeps the CR of a CRLF pair inside the comment node.
+        // Strip line endings so JoinSiblingChunks does not invent blank lines.
+        var commentText = node.Text.TrimEnd('\r', '\n');
 
         if (commentText.StartsWith("//", StringComparison.Ordinal))
             return indent + commentText.Replace("\r\n", "\n").Replace('\r', '\n')
@@ -892,7 +894,7 @@ public sealed class AstPrinter
         return indent + commentText;
     }
 
-    private string FormatPreprocessor(Node node) => node.Text;
+    private string FormatPreprocessor(Node node) => node.Text.TrimEnd('\r', '\n');
 
     private string FormatMethodmap(Node node, int indentLevel)
     {
@@ -1916,7 +1918,10 @@ public sealed class AstPrinter
 
         for (var i = 0; i < siblings.Count; i++)
         {
-            chunks.Add(siblings[i].Text);
+            // Chunks must be single logical lines/blocks without a trailing line ending.
+            // Otherwise joining with LineEnding doubles breaks (common with CRLF comments
+            // where Tree-sitter leaves '\r' on the node and '\n' in the gap).
+            chunks.Add(siblings[i].Text.TrimEnd('\r', '\n'));
             if (i + 1 >= siblings.Count)
                 break;
 

@@ -533,6 +533,38 @@ public class BlankLinePreservationTests : FormatterTestBase
         f.Format(input).Should().Be("int a;\n\nint b;\n\n\nint c;");
     }
 
+    [Fact]
+    public void CrLf_comment_nodes_do_not_invent_or_grow_blanks()
+    {
+        // Tree-sitter keeps '\r' on the comment and '\n' in the sibling gap on Windows CRLF.
+        const string input = "// note\r\nint a;\r\n";
+        using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\r\n" });
+        var once = f.Format(input);
+        once.Should().Be("// note\r\nint a;");
+        f.Format(once).Should().Be(once);
+    }
+
+    [Fact]
+    public void CrLf_comment_with_author_blank_stays_idempotent()
+    {
+        const string input = "// note\r\n\r\nint a;\r\n";
+        using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\r\n" });
+        var once = f.Format(input);
+        once.Should().Be("// note\r\n\r\nint a;");
+        f.Format(once).Should().Be(once);
+        f.Format(f.Format(once)).Should().Be(once);
+    }
+
+    [Fact]
+    public void CrLf_pragma_and_define_siblings_stay_idempotent()
+    {
+        const string input = "#pragma semicolon 1\r\n#pragma newdecls required\r\n#define X 1\r\n";
+        using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\r\n" });
+        var once = f.Format(input);
+        once.Should().Be("#pragma semicolon 1\r\n#pragma newdecls required\r\n#define X 1");
+        f.Format(once).Should().Be(once);
+    }
+
     [Theory]
     [InlineData("BlankLines/Basic/top_level_sections")]
     [InlineData("BlankLines/Basic/block_inner")]

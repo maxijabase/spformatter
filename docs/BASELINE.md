@@ -10,10 +10,10 @@ dotnet test SpFormatter.slnx --verbosity minimal
 
 | Metric | Count |
 |---|---|
-| Passed | 398 |
+| Passed | 403 |
 | Failed | 0 |
 | Skipped | 0 |
-| Total | 398 |
+| Total | 403 |
 
 Printer migration roadmap is complete. Remaining Recovery path is opt-in via `AllowSyntaxRecovery`. Sibling blank lines are restored from source gaps (Step 24).
 

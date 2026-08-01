@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 398
+- Passed: 403
 - Failed: 0
 - Skipped: 0
-- Total: 398
+- Total: 403
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
