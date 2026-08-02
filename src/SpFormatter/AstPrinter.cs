@@ -128,6 +128,9 @@ public sealed class AstPrinter
             case "return_statement":
                 result = FormatReturnStatement(node, indentLevel);
                 return true;
+            case "delete_statement":
+                result = FormatDeleteStatement(node, indentLevel);
+                return true;
             case "condition_statement":
                 result = FormatConditionStatement(node, indentLevel);
                 return true;
@@ -514,6 +517,23 @@ public sealed class AstPrinter
         }
 
         return _layout.Indent(indentLevel) + string.Join("", parts) + ";";
+    }
+
+    private string FormatDeleteStatement(Node node, int indentLevel)
+    {
+        // UnknownNodePrinter glued `delete` to operands ending in `]` (`deleteh_timer[X]`).
+        string? target = null;
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "delete" or ";")
+                continue;
+
+            var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                target = formatted;
+        }
+
+        return _layout.Indent(indentLevel) + "delete " + (target ?? "") + ";";
     }
 
     private string FormatConditionStatement(Node node, int indentLevel)

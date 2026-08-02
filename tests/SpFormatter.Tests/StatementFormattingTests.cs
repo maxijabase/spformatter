@@ -26,6 +26,12 @@ public class StatementFormattingTests : FormatterTestBase
     }
 
     [Fact]
+    public void Delete_keeps_space_before_indexed_operand()
+    {
+        AssertTestCaseFormatsCorrectly("Statements/Delete/delete_indexed");
+    }
+
+    [Fact]
     public void Break_and_continue_keep_semicolons()
     {
         const string input = """
