@@ -129,6 +129,21 @@ public class ExpressionTests : FormatterTestBase
 
     #endregion
 
+    #region Ternary Expressions
+
+    [Theory]
+    [InlineData("Expressions/TernaryExpressions/simple_ternary")]
+    [InlineData("Expressions/TernaryExpressions/nested_ternary")]
+    [InlineData("Expressions/TernaryExpressions/ternary_return")]
+    [InlineData("Expressions/TernaryExpressions/ternary_unary_false")]
+    [InlineData("Expressions/TernaryExpressions/ternary_block_comment")]
+    public void TernaryExpressions_ShouldFormatCorrectly(string testCaseName)
+    {
+        AssertTestCaseFormatsCorrectly(testCaseName);
+    }
+
+    #endregion
+
     #region Syntax Validation Tests
 
     [Theory]
