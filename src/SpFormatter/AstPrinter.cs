@@ -2449,16 +2449,50 @@ public sealed class AstPrinter
     private string FormatBinaryExpression(Node node)
     {
         var parts = new List<string>();
+        var breakBeforeNext = false;
+
         foreach (var child in node.Children)
         {
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0).Trim();
+                if (string.IsNullOrEmpty(comment))
+                    continue;
+
+                if (comment.StartsWith("//", StringComparison.Ordinal))
+                {
+                    // Keep `//` from eating the next `&&` / operand.
+                    if (parts.Count > 0)
+                        parts[^1] = parts[^1] + " " + comment;
+                    else
+                        parts.Add(comment);
+                    breakBeforeNext = true;
+                    continue;
+                }
+
+                if (parts.Count > 0)
+                    parts[^1] = parts[^1] + " " + comment;
+                else
+                    parts.Add(comment);
+                continue;
+            }
+
             var formatted = _formatChild(child, 0);
             if (string.IsNullOrEmpty(formatted))
                 continue;
 
             if (_layout.IsBinaryOrAssignmentOperator(child.Type))
-                parts.Add(_layout.FormatBinaryOperator(formatted.Trim()));
+                formatted = _layout.FormatBinaryOperator(formatted.Trim());
+
+            if (breakBeforeNext)
+            {
+                parts.Add(_layout.Options.LineEnding + _layout.Indent(1) + formatted.TrimStart());
+                breakBeforeNext = false;
+            }
             else
+            {
                 parts.Add(formatted);
+            }
         }
 
         return string.Join("", parts);

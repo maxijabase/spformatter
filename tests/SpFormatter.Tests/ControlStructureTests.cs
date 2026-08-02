@@ -11,6 +11,7 @@ public class ControlStructureTests : FormatterTestBase
     [InlineData("ControlStructures/SimpleIf/if_condition")]
     [InlineData("ControlStructures/SimpleIf/if_with_space")]
     [InlineData("ControlStructures/SimpleIf/if_extra_spaces")]
+    [InlineData("ControlStructures/SimpleIf/if_condition_line_comments")]
     public void SimpleIfStatements_ShouldFormatExactly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
