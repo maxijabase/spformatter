@@ -37,7 +37,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | char_literal | Supported | `AstPrinter` prints `node.Text` (`'\0'` stays glued; was mis-typed as `character_literal`) |
 | for / while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing; `old_for_loop_variable_declaration_statement` (`new i = 0, s`) via declaration printer (no bogus `;` mid-header); `#else` / `#endif` siblings mid-for are not treated as the body |
 | switch / case | Supported | `AstPrinter`; case label spacing; block bodies and bare statement bodies after `:`; fall-through chains |
-| return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored |
+| return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored; bare `return` + next-line statement (semicolon-0 parse as valued return) is split back into `return;` + statement |
 | delete | Supported | `AstPrinter`; space after `delete` even when operand is indexed (`delete h_timer[X]`) |
 | expression statements | Supported | `AstPrinter`; does not drop present semicolons |
 | blocks | Supported | multiline `block` + compact via `PrintCompactBlock`; RequireSemicolons preserved |

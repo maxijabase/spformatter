@@ -513,19 +513,83 @@ public sealed class AstPrinter
 
     private string FormatReturnStatement(Node node, int indentLevel)
     {
-        var parts = new List<string> { "return" };
-
+        Node? returnKw = null;
+        Node? value = null;
         foreach (var child in node.Children)
         {
-            if (child.Type is ";" or "return")
+            if (child.Type == "return")
+            {
+                returnKw = child;
+                continue;
+            }
+
+            if (child.Type == ";")
                 continue;
 
-            var formatted = _formatChild(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-                parts.Add(" " + formatted);
+            value = child;
         }
 
-        return _layout.Indent(indentLevel) + string.Join("", parts) + ";";
+        var indent = _layout.Indent(indentLevel);
+
+        // Semicolon-0 sources often write a bare `return` then a next statement on
+        // the following line. Tree-sitter folds that into `return <expr>`, which
+        // turns `return` + `x = 0` into a valued return and breaks mixed return
+        // styles under spcomp. Split when the source has a newline between them.
+        if (value != null
+            && returnKw != null
+            && !string.IsNullOrEmpty(_source)
+            && returnKw.EndIndex < value.StartIndex
+            && value.StartIndex <= _source.Length
+            && _source.AsSpan(returnKw.EndIndex, value.StartIndex - returnKw.EndIndex).Contains('\n'))
+        {
+            // Keep the continued statement at its source column so a following
+            // assignment under a bare if-return is not stuck at if-body indent
+            // (which would break format idempotency on the second pass).
+            var continuedLevel = IndentLevelAt(value.StartIndex);
+            string continued;
+            if (value.Type == "assignment_expression")
+                continued = FormatAssignmentExpression(value, continuedLevel, asStatement: true);
+            else if (NeedsStatementSemicolon(value.Type))
+                continued = _layout.Indent(continuedLevel) + _formatChild(value, 0) + ";";
+            else
+                continued = _formatChild(value, continuedLevel);
+
+            if (string.IsNullOrWhiteSpace(continued))
+                return indent + "return;";
+
+            return indent + "return;" + _layout.Options.LineEnding + continued.TrimEnd();
+        }
+
+        if (value == null)
+            return indent + "return;";
+
+        var formattedValue = _formatChild(value, 0);
+        if (string.IsNullOrEmpty(formattedValue))
+            return indent + "return;";
+
+        return indent + "return " + formattedValue + ";";
+    }
+
+    private int IndentLevelAt(int index)
+    {
+        if (string.IsNullOrEmpty(_source) || index <= 0 || index > _source.Length)
+            return 0;
+
+        var lineStart = _source.LastIndexOf('\n', index - 1) + 1;
+        var columns = 0;
+        for (var i = lineStart; i < index; i++)
+        {
+            var ch = _source[i];
+            if (ch == ' ')
+                columns++;
+            else if (ch == '\t')
+                columns += Math.Max(1, _layout.Options.IndentSize);
+            else
+                break;
+        }
+
+        var size = Math.Max(1, _layout.Options.IndentSize);
+        return columns / size;
     }
 
     private string FormatDeleteStatement(Node node, int indentLevel)
