@@ -2008,9 +2008,30 @@ public sealed class AstPrinter
     private string FormatSourceFile(Node node, int indentLevel)
     {
         var entries = new List<(Node Node, string Type, string Text)>();
+        var children = node.Children;
 
-        foreach (var child in node.Children)
+        for (var i = 0; i < children.Count; i++)
         {
+            var child = children[i];
+
+            // Grammar/lexer split: `#define URL "http://host"` becomes
+            // preproc_define(`... "http:`) + comment(`//host"`). Rejoin from source.
+            if (child.Type == "preproc_define"
+                && i + 1 < children.Count
+                && children[i + 1].Type is "comment" or "line_comment" or "block_comment"
+                && !string.IsNullOrEmpty(_source)
+                && LooksLikeDefineSplitByUrlComment(child, children[i + 1]))
+            {
+                var merged = _source.Substring(
+                    child.StartIndex,
+                    children[i + 1].EndIndex - child.StartIndex);
+                merged = merged.TrimEnd('\r', '\n');
+                if (!string.IsNullOrWhiteSpace(merged))
+                    entries.Add((child, child.Type, merged));
+                i++;
+                continue;
+            }
+
             var formatted = _formatChild(child, indentLevel);
             if (string.IsNullOrWhiteSpace(formatted))
                 continue;
@@ -2531,5 +2552,23 @@ public sealed class AstPrinter
         var question = _layout.Options.SpaceAroundOperators ? " ? " : "?";
         var colon = _layout.Options.SpaceAroundOperators ? " : " : ":";
         return conditionText + question + consequenceText + colon + alternativeText;
+    }
+
+    private static bool LooksLikeDefineSplitByUrlComment(Node define, Node comment)
+    {
+        var defineText = define.Text;
+        var commentText = comment.Text.TrimStart();
+        if (!commentText.StartsWith("//", StringComparison.Ordinal))
+            return false;
+
+        // Unclosed quote in the define body, and the "comment" continues the string.
+        var quotes = 0;
+        for (var i = 0; i < defineText.Length; i++)
+        {
+            if (defineText[i] == '"' && (i == 0 || defineText[i - 1] != '\\'))
+                quotes++;
+        }
+
+        return quotes % 2 != 0;
     }
 }

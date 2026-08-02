@@ -41,7 +41,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | delete | Supported | `AstPrinter`; space after `delete` even when operand is indexed (`delete h_timer[X]`) |
 | expression statements | Supported | `AstPrinter`; does not drop present semicolons |
 | blocks | Supported | multiline `block` + compact via `PrintCompactBlock`; RequireSemicolons preserved |
-| includes / preprocessor directives | Supported | `AstPrinter` prints directive `node.Text` (trim trailing CR/LF only); SortIncludes remains opt-in at source_file |
+| includes / preprocessor directives | Supported | `AstPrinter` prints directive `node.Text` (trim trailing CR/LF only); SortIncludes remains opt-in at source_file; `#define` values with `http://` rejoined when the lexer splits them into define + `//` comment |
 | function-like macros (`#define Name(`) | Partial | **refused by default** (`AllowUnsafeMacros` / `--unsafe-macros` to override). AST rewrite cannot see expansions; formatting can break compiling plugins (see `corpus/macro_abuse/`). Object-like `#define NAME value` is fine. |
 | comments | Supported | `AstPrinter`; indent only, text preserved |
 | ternary | Supported | `AstPrinter` honors `SpaceAroundOperators` |

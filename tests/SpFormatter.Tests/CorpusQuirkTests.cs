@@ -7,6 +7,7 @@ public class CorpusQuirkTests : FormatterTestBase
     [Theory]
     [InlineData("Literals/Chars/null_char")]
     [InlineData("ControlStructures/IfTrailingComment/if_trailing_comment")]
+    [InlineData("Preprocessor/DefineUrl/define_http_url")]
     public void CorpusQuirks_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
