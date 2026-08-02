@@ -30,7 +30,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | call expressions / args | Supported | `call_expression` and `call_arguments` both in `AstPrinter`; comma spacing via `LayoutRules.JoinComma`; comments are not args (no invented `/* x */,`) |
 | variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts`; old tags stay `Tag:name` |
 | old_type / old_type_cast | Supported | `AstPrinter`; colon glued (`Handle:x`, `Float:0`); no spaces around `:` |
-| function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed; legacy tagged returns stay glued (`Action:Foo`, not dropped / not `Action: Foo`) |
+| function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed; legacy tagged returns stay glued (`Action:Foo`); array returns keep dims (`char[] Translate`) |
 | parameter list comments | Supported | same as call args: comments are not parameters (no invented `,` around `/* ... */`) |
 | native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
 | if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; trailing comments after `)` stay on the if line; `#else` / `#endif` siblings mid-if are not treated as the body; no brace injection |

@@ -340,6 +340,7 @@ public sealed class AstPrinter
     private bool TryFormatFunctionDefinition(Node node, int indentLevel, out string result)
     {
         Node? visibility = null, returnType = null, functionName = null, parameters = null, body = null;
+        var returnDimensions = new List<Node>();
 
         foreach (var child in node.Children)
         {
@@ -350,8 +351,14 @@ public sealed class AstPrinter
                     break;
                 case "type":
                 case "old_type":
+                case "array_type":
                     // Legacy tagged returns: Action:Foo, not modern `Action Foo`.
                     returnType = child;
+                    break;
+                case "dimension":
+                    // `char[] Translate` attaches [] to the return type before the name.
+                    if (functionName == null)
+                        returnDimensions.Add(child);
                     break;
                 case "identifier":
                     functionName ??= child;
@@ -370,12 +377,14 @@ public sealed class AstPrinter
             signatureParts.Add(_formatChild(visibility, 0));
         if (returnType != null)
             signatureParts.Add(_formatChild(returnType, 0));
+        foreach (var dim in returnDimensions)
+            signatureParts.Add(_formatChild(dim, 0));
         if (functionName != null)
             signatureParts.Add(_formatChild(functionName, 0));
         if (parameters != null)
             signatureParts.Add(_formatChild(parameters, 0));
 
-        // JoinDeclarationParts keeps Tag:name glued (no space after ':').
+        // JoinDeclarationParts keeps Tag:name glued (no space after ':') and char[] glued.
         var signature = _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(signatureParts);
 
         if (body == null)
