@@ -2512,6 +2512,98 @@ public sealed class AstPrinter
 
     private string FormatVariableDeclaration(Node node, int indentLevel)
     {
+        // `#if` / `#endif` / `#define` mid-declaration must stay on their own lines
+        // at column 0. Joining them into `static const char #if ...` breaks spcomp.
+        var hasPreprocessor = node.Children.Any(c =>
+            c.Type.StartsWith("preproc_", StringComparison.Ordinal));
+        if (!hasPreprocessor)
+            return FormatVariableDeclarationCompact(node, indentLevel);
+
+        var lines = new List<string>();
+        var parts = new List<string>();
+        var indent = _layout.Indent(indentLevel);
+
+        void FlushParts(bool withSemicolon)
+        {
+            if (parts.Count == 0)
+                return;
+
+            var joined = JoinDeclarationPartsBreakingAfterLineComments(parts, indentLevel);
+            if (withSemicolon && _layout.Options.RequireSemicolons)
+                joined = EnsureSemicolonBeforeTrailingLineComment(joined);
+            lines.Add(indent + joined);
+            parts.Clear();
+        }
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type == ";")
+                continue;
+
+            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal))
+            {
+                FlushParts(withSemicolon: false);
+                var directive = _formatChild(child, 0).TrimEnd('\r', '\n');
+                if (!string.IsNullOrWhiteSpace(directive))
+                    lines.Add(directive);
+                continue;
+            }
+
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0).Trim();
+                if (string.IsNullOrEmpty(comment))
+                    continue;
+
+                if (comment.StartsWith("//", StringComparison.Ordinal))
+                {
+                    FlushParts(withSemicolon: false);
+                    lines.Add(indent + comment);
+                }
+                else if (parts.Count > 0)
+                {
+                    parts[^1] = parts[^1] + " " + comment;
+                }
+                else
+                {
+                    lines.Add(indent + comment);
+                }
+
+                continue;
+            }
+
+            if (child.Type is "variable_declaration" or "old_variable_declaration")
+            {
+                var nested = FormatVariableDeclarationInner(child, indentLevel);
+                if (!string.IsNullOrEmpty(nested))
+                    parts.Add(nested);
+                continue;
+            }
+
+            if (child.Type == ",")
+            {
+                if (parts.Count > 0 && !parts[^1].EndsWith(','))
+                    parts[^1] = parts[^1] + ",";
+                continue;
+            }
+
+            if (child.Type == "array_literal")
+            {
+                parts.Add(FormatArrayLiteral(child, indentLevel));
+                continue;
+            }
+
+            var formatted = FormatDeclarationChild(child);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        FlushParts(withSemicolon: true);
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatVariableDeclarationCompact(Node node, int indentLevel)
+    {
         var parts = new List<string>();
 
         foreach (var child in node.Children)
