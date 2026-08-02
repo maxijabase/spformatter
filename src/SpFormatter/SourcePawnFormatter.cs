@@ -47,6 +47,10 @@ public class SourcePawnFormatter : IDisposable
         if (_disposed)
             throw new ObjectDisposedException(nameof(SourcePawnFormatter));
 
+        // Tree-sitter treats CR-only files as one long line, so `http://` in strings
+        // becomes string + `//` comment and whole files collapse into ERROR/comment soup.
+        sourceCode = NormalizeNewlines(sourceCode);
+
         if (!_options.AllowUnsafeMacros && MacroSafety.ContainsFunctionLikeDefine(sourceCode))
             return FormatResult.Fail(MacroSafety.RefusalMessage);
 
@@ -149,6 +153,15 @@ public class SourcePawnFormatter : IDisposable
         }
 
         return string.Join(_options.LineEnding, parts);
+    }
+
+    private static string NormalizeNewlines(string sourceCode)
+    {
+        if (string.IsNullOrEmpty(sourceCode))
+            return sourceCode;
+
+        return sourceCode.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
     }
 
     public void Dispose()
