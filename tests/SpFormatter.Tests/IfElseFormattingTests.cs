@@ -21,6 +21,12 @@ public class IfElseFormattingTests : FormatterTestBase
     }
 
     [Fact]
+    public void If_with_else_preproc_keeps_both_branches_and_body()
+    {
+        AssertTestCaseFormatsCorrectly("ControlStructures/IfPreproc/if_else_preproc");
+    }
+
+    [Fact]
     public void Bare_single_statement_if_is_not_brace_wrapped()
     {
         const string input = """

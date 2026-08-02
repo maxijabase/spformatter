@@ -518,13 +518,18 @@ public sealed class AstPrinter
 
     private string FormatConditionStatement(Node node, int indentLevel)
     {
+        // Walk children in order. Preprocessor siblings (`#else` / `#endif` mid-if) must
+        // not be chosen as the body via `??=` or the real body is dropped.
         Node? condition = null;
-        Node? truePath = null;
-        Node? falsePath = null;
-        var trailingIfComments = new List<string>();
-        var trailingElseComments = new List<string>();
         var inParens = false;
+        var pastCondition = false;
         var seenElse = false;
+        var emittedTrueBody = false;
+        var trailingElseComments = new List<string>();
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var lines = new List<string>();
 
         foreach (var child in node.Children)
         {
@@ -537,6 +542,11 @@ public sealed class AstPrinter
                     continue;
                 case ")":
                     inParens = false;
+                    pastCondition = true;
+                    {
+                        var conditionText = condition != null ? _formatChild(condition, 0) : "";
+                        lines.Add(indent + "if" + space + "(" + conditionText + ")");
+                    }
                     continue;
                 case "else":
                     seenElse = true;
@@ -544,15 +554,14 @@ public sealed class AstPrinter
                 case "comment":
                 case "line_comment":
                 case "block_comment":
-                    // Do not treat trailing comments as the if/else body.
-                    if (inParens)
+                    if (inParens || !pastCondition)
                         continue;
                     var commentText = _formatChild(child, 0).Trim();
                     if (string.IsNullOrEmpty(commentText))
                         continue;
-                    if (!seenElse && truePath == null)
-                        trailingIfComments.Add(commentText);
-                    else if (seenElse && falsePath == null)
+                    if (!seenElse && !emittedTrueBody && lines.Count > 0)
+                        lines[0] += " " + commentText;
+                    else if (seenElse)
                         trailingElseComments.Add(commentText);
                     continue;
             }
@@ -563,38 +572,49 @@ public sealed class AstPrinter
                 continue;
             }
 
-            if (!seenElse)
-                truePath ??= child;
-            else
-                falsePath ??= child;
-        }
+            if (!pastCondition)
+                continue;
 
-        var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
-        var conditionText = condition != null ? _formatChild(condition, 0) : "";
-        var ifHeader = indent + "if" + space + "(" + conditionText + ")";
-        if (trailingIfComments.Count > 0)
-            ifHeader += " " + string.Join(" ", trailingIfComments);
-
-        var lines = new List<string> { ifHeader };
-
-        AppendControlBody(lines, truePath, indentLevel);
-
-        if (falsePath != null)
-        {
-            if (falsePath.Type == "condition_statement")
+            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal))
             {
-                var elseIfFormatted = FormatConditionStatement(falsePath, indentLevel);
+                lines.Add(_formatChild(child, 0).TrimEnd('\r', '\n'));
+                continue;
+            }
+
+            if (!seenElse)
+            {
+                // Nested `if` after `#else` stays at the same indent (tree nesting is artificial).
+                if (child.Type == "condition_statement")
+                    lines.Add(FormatConditionStatement(child, indentLevel));
+                else
+                    AppendControlBody(lines, child, indentLevel);
+                emittedTrueBody = true;
+                continue;
+            }
+
+            if (child.Type == "condition_statement")
+            {
+                var elseIfFormatted = FormatConditionStatement(child, indentLevel);
                 lines.Add(indent + "else " + elseIfFormatted[indent.Length..]);
             }
             else
             {
                 var elseHeader = indent + "else";
                 if (trailingElseComments.Count > 0)
+                {
                     elseHeader += " " + string.Join(" ", trailingElseComments);
+                    trailingElseComments.Clear();
+                }
+
                 lines.Add(elseHeader);
-                AppendControlBody(lines, falsePath, indentLevel);
+                AppendControlBody(lines, child, indentLevel);
             }
+        }
+
+        if (lines.Count == 0)
+        {
+            var conditionText = condition != null ? _formatChild(condition, 0) : "";
+            lines.Add(indent + "if" + space + "(" + conditionText + ")");
         }
 
         return string.Join(_layout.Options.LineEnding, lines);

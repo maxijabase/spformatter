@@ -33,7 +33,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed |
 | parameter list comments | Supported | same as call args: comments are not parameters (no invented `,` around `/* ... */`) |
 | native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
-| if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; trailing comments after `)` stay on the if line; no brace injection |
+| if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; trailing comments after `)` stay on the if line; `#else` / `#endif` siblings mid-if are not treated as the body; no brace injection |
 | char_literal | Supported | `AstPrinter` prints `node.Text` (`'\0'` stays glued; was mis-typed as `character_literal`) |
 | for / while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing; `old_for_loop_variable_declaration_statement` (`new i = 0, s`) via declaration printer (no bogus `;` mid-header) |
 | switch / case | Supported | `AstPrinter`; case label spacing; block bodies and bare statement bodies after `:`; fall-through chains |
