@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Xunit;
 
 namespace SpFormatter.Tests;
@@ -88,9 +89,26 @@ public class ExpressionTests : FormatterTestBase
     [InlineData("Expressions/FunctionCalls/simple_function_call")]
     [InlineData("Expressions/FunctionCalls/function_with_params")]
     [InlineData("Expressions/FunctionCalls/nested_function_call")]
+    [InlineData("Expressions/FunctionCalls/call_arg_comments")]
     public void FunctionCallExpressions_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
+    }
+
+    [Fact]
+    public void Call_argument_comments_do_not_get_extra_commas_and_are_idempotent()
+    {
+        const string input = """
+            void TestFunction()
+            {
+                ExplodeString(versionText, /* split */ ".", versionNumbers, .maxStrings = 4, .maxStringLength = 4);
+            }
+            """;
+        using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\n" });
+        var once = f.Format(input);
+        once.Should().Contain("/* split */ \".\"");
+        once.Should().NotContain("/* split */,");
+        f.Format(once).Should().Be(once);
     }
 
     #endregion

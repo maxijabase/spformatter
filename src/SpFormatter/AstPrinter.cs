@@ -2195,21 +2195,67 @@ public sealed class AstPrinter
 
     private string FormatCallArguments(Node node)
     {
-        var arguments = new List<string>();
+        // Comments are not arguments. Joining every non-paren child with commas turns
+        // `F(a, /* x */ b)` into `F(a, /* x */, b)` and breaks re-parse.
+        var result = new System.Text.StringBuilder("(");
+        var pendingComments = new List<string>();
+        var seenArgument = false;
+        var commaSep = _layout.Options.SpaceAfterComma ? ", " : ",";
+
         foreach (var child in node.Children)
         {
-            if (child.Type is "(" or ")" or ",")
+            if (child.Type is "(" or ")")
                 continue;
 
-            var formatted = _formatChild(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-                arguments.Add(formatted);
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0);
+                if (!string.IsNullOrEmpty(comment))
+                    pendingComments.Add(comment);
+                continue;
+            }
+
+            if (child.Type == ",")
+            {
+                FlushCallArgComments(result, pendingComments, trailingSpace: false);
+                continue;
+            }
+
+            var argument = _formatChild(child, 0);
+            if (string.IsNullOrEmpty(argument))
+                continue;
+
+            if (seenArgument)
+                result.Append(commaSep);
+            seenArgument = true;
+
+            FlushCallArgComments(result, pendingComments, trailingSpace: true);
+            result.Append(argument);
         }
 
-        if (arguments.Count == 0)
-            return "()";
+        FlushCallArgComments(result, pendingComments, trailingSpace: false);
+        result.Append(')');
+        return result.ToString();
+    }
 
-        return "(" + _layout.JoinComma(arguments) + ")";
+    private static void FlushCallArgComments(
+        System.Text.StringBuilder result,
+        List<string> pendingComments,
+        bool trailingSpace)
+    {
+        if (pendingComments.Count == 0)
+            return;
+
+        foreach (var comment in pendingComments)
+        {
+            if (result.Length == 0 || result[^1] != ' ')
+                result.Append(' ');
+            result.Append(comment);
+        }
+
+        pendingComments.Clear();
+        if (trailingSpace)
+            result.Append(' ');
     }
 
     private string FormatTernaryExpression(Node node)
