@@ -1,6 +1,13 @@
 #include <sourcemod>
 
-public Plugin myinfo = { name = "Corpus Sample" , author = "spformatter" , description = "Tiny plugin used by formatter corpus checks" , version = "1.0.0" , url = "" };
+public Plugin myinfo =
+{
+    name = "Corpus Sample",
+    author = "spformatter",
+    description = "Tiny plugin used by formatter corpus checks",
+    version = "1.0.0",
+    url = "",
+};
 public void OnPluginStart()
 {
     RegConsoleCmd("sm_hello", Command_Hello);

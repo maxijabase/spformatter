@@ -245,6 +245,13 @@ Close gaps vs Sarrus’s SPFormat rewrite printers. One construct family per chu
 - Restore capped blank lines between siblings using original byte gaps (`PreserveEmptyLines` / `MaxConsecutiveEmptyLines`)
 - Covers source_file, blocks, and braced member lists (enum/methodmap/struct/…)
 
+### Step 25. Macro safety defaults
+
+- Status: `Done`
+- Refuse function-like `#define Name(` unless `AllowUnsafeMacros` / `--unsafe-macros`
+- Drop heuristic semicolon injection (`LooksLikeStatementNeedingSemicolon`)
+- Document Partial status; keep `corpus/macro_abuse/` as the contract
+
 ## Deferred forever unless product asks
 
 Do not schedule these unless the user explicitly expands scope:

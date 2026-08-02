@@ -47,6 +47,9 @@ public class SourcePawnFormatter : IDisposable
         if (_disposed)
             throw new ObjectDisposedException(nameof(SourcePawnFormatter));
 
+        if (!_options.AllowUnsafeMacros && MacroSafety.ContainsFunctionLikeDefine(sourceCode))
+            return FormatResult.Fail(MacroSafety.RefusalMessage);
+
         using var tree = _parser.ParseSource(sourceCode);
         if (tree?.RootNode == null)
             return FormatResult.Fail("Unable to parse source code");

@@ -48,4 +48,5 @@ Product defaults for formatted SourcePawn. Goldens must follow this file, not ad
 - brace injection for bare `if` bodies as a silent default
 - top-level reordering as a silent default
 - indenting preprocessor directives
+- formatting through function-like macros (refuse by default; see SUPPORTED.md)
 

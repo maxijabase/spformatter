@@ -22,7 +22,11 @@ dotnet run --project src/SpFormatter.Cli -- plugin.sp --backup
 dotnet run --project src/SpFormatter.Cli -- plugin.sp --indent 2 --quiet
 ```
 
-Useful flags: `--output`, `--stdin` (editor-friendly), `--backup` (in-place with `.bak`), `--check`, `--dir`, `--indent`, `--use-tabs`, `--space-before-paren`, `--no-space-around-operators`.
+Useful flags: `--output`, `--stdin` (editor-friendly), `--backup` (in-place with `.bak`), `--check`, `--dir`, `--indent`, `--use-tabs`, `--space-before-paren`, `--no-space-around-operators`, `--unsafe-macros`.
+
+## Macros
+
+SpFormatter formats **SourcePawn**, not the preprocessor language. Files with function-like `#define Name(` macros are **refused by default** so format-on-save cannot silently break plugins. Object-like `#define MAX 64` is fine. Override with `--unsafe-macros` / `AllowUnsafeMacros` only if you accept the risk. See `corpus/macro_abuse/` and [docs/SUPPORTED.md](docs/SUPPORTED.md).
 
 ## Projects
 
@@ -30,6 +34,7 @@ Useful flags: `--output`, `--stdin` (editor-friendly), `--backup` (in-place with
 - `src/SpFormatter.Cli` – command-line tool
 - `src/SpFormatter.UI` – WPF playground
 - `tests/SpFormatter.Tests` – tests and golden fixtures
+- `corpus/macro_abuse/` – intentional preprocessor stress cases
 
 ## Docs
 
@@ -42,4 +47,4 @@ Useful flags: `--output`, `--stdin` (editor-friendly), `--backup` (in-place with
 
 ## Status
 
-This repo is being salvaged toward a layered printer. Expect incomplete language coverage and a mix of legacy and new paths while that work lands.
+Printer migration is largely done. Defaults fail closed on syntax errors and on function-like macros.

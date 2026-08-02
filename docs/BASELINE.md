@@ -10,10 +10,10 @@ dotnet test SpFormatter.slnx --verbosity minimal
 
 | Metric | Count |
 |---|---|
-| Passed | 403 |
+| Passed | 420 |
 | Failed | 0 |
 | Skipped | 0 |
-| Total | 403 |
+| Total | 420 |
 
 Printer migration roadmap is complete. Remaining Recovery path is opt-in via `AllowSyntaxRecovery`. Sibling blank lines are restored from source gaps (Step 24).
 
@@ -42,6 +42,6 @@ Many of those failures were CRLF in fixtures vs `\n` formatter output.
 - Exact-match helpers normalize newlines and trim trailing blank lines.
 - Idempotency covers Expressions / Functions / Variables / ControlStructures inputs.
 - Golden discovery auto-loads exact pairs under those categories.
-- CLI tests fail if the CLI binary is missing (project reference builds it).
+- CLI tests resolve `SpFormatter.Cli` from Release or Debug under `bin/` (CI uses Release).
 - CLI `--backup` writes in place with a `.bak` file.
 - Fail closed is the default; recovery tests opt into `AllowSyntaxRecovery`.

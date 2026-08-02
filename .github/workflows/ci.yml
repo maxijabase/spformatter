@@ -16,7 +16,8 @@ jobs:
         run: dotnet build SpFormatter.slnx --configuration Release
       - name: Test
         run: dotnet test SpFormatter.slnx --configuration Release --no-build --verbosity minimal
-      - name: Format check corpus
+      - name: Format check clean corpus
         run: |
           dotnet build src/SpFormatter.Cli/SpFormatter.Cli.csproj --configuration Release
-          dotnet run --project src/SpFormatter.Cli --configuration Release --no-build -- corpus --dir --check --quiet
+          # macro_abuse/ is refused by default (function-like #define); only smoke clean samples
+          dotnet run --project src/SpFormatter.Cli --configuration Release --no-build -- corpus/sample_plugin.sp --check --quiet

@@ -13,10 +13,10 @@ Statuses:
 
 Recorded with `dotnet test SpFormatter.slnx`:
 
-- Passed: 403
+- Passed: 420
 - Failed: 0
 - Skipped: 0
-- Total: 403
+- Total: 420
 
 See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Supported constructs, not as proof that Partial/Legacy paths are finished.
 
@@ -39,7 +39,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored |
 | expression statements | Supported | `AstPrinter`; does not drop present semicolons |
 | blocks | Supported | multiline `block` + compact via `PrintCompactBlock`; RequireSemicolons preserved |
-| includes / preprocessor | Supported | `AstPrinter` prints `node.Text`; SortIncludes remains opt-in at source_file |
+| includes / preprocessor directives | Supported | `AstPrinter` prints directive `node.Text` (trim trailing CR/LF only); SortIncludes remains opt-in at source_file |
+| function-like macros (`#define Name(`) | Partial | **refused by default** (`AllowUnsafeMacros` / `--unsafe-macros` to override). AST rewrite cannot see expansions; formatting can break compiling plugins (see `corpus/macro_abuse/`). Object-like `#define NAME value` is fine. |
 | comments | Supported | `AstPrinter`; indent only, text preserved |
 | ternary | Supported | `AstPrinter` honors `SpaceAroundOperators` |
 | arrays / indexed access | Supported | `array_access` / `array_indexed_access` / `fixed_dimension` in `AstPrinter`; `SpaceInArrayBrackets` via options |

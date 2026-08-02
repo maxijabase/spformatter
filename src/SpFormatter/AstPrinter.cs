@@ -407,13 +407,6 @@ public sealed class AstPrinter
             {
                 formatted = formatted.TrimEnd() + ";";
             }
-            else if (_layout.Options.RequireSemicolons
-                     && LooksLikeStatementNeedingSemicolon(formatted)
-                     && !formatted.TrimEnd().EndsWith(";")
-                     && !formatted.Contains('{'))
-            {
-                formatted = formatted.TrimEnd() + ";";
-            }
 
             siblings.Add((child, formatted));
         }
@@ -444,13 +437,6 @@ public sealed class AstPrinter
             {
                 formatted = formatted.TrimEnd() + ";";
             }
-            else if (_layout.Options.RequireSemicolons
-                     && LooksLikeStatementNeedingSemicolon(formatted)
-                     && !formatted.TrimEnd().EndsWith(";")
-                     && !formatted.Contains('{'))
-            {
-                formatted = formatted.TrimEnd() + ";";
-            }
 
             parts.Add(formatted.Trim());
         }
@@ -463,19 +449,6 @@ public sealed class AstPrinter
 
     private static bool NeedsStatementSemicolon(string nodeType) =>
         nodeType is "call_expression" or "assignment_expression" or "update_expression";
-
-    private static bool LooksLikeStatementNeedingSemicolon(string formatted)
-    {
-        var trimmed = formatted.Trim();
-        if (trimmed.Contains('(') && trimmed.EndsWith(')'))
-            return true;
-        if (trimmed.Contains('='))
-            return true;
-        if (trimmed.EndsWith("++") || trimmed.StartsWith("++")
-            || trimmed.EndsWith("--") || trimmed.StartsWith("--"))
-            return true;
-        return false;
-    }
 
     private string FormatExpressionStatement(Node node, int indentLevel)
     {

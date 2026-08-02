@@ -35,6 +35,12 @@ public class FormattingOptions
     /// </summary>
     public bool AllowSyntaxRecovery { get; set; } = false;
 
+    /// <summary>
+    /// When false (default), refuse to format files that contain function-like <c>#define Name(</c> macros.
+    /// Those macros can inject syntax the AST does not see; formatting them can break compiling plugins.
+    /// </summary>
+    public bool AllowUnsafeMacros { get; set; } = false;
+
     public string LineEnding { get; set; } = Environment.NewLine;
 
     public static FormattingOptions Default => new();

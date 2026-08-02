@@ -65,6 +65,9 @@ public class Program
                 case "--no-space-around-operators":
                     options.SpaceAroundOperators = false;
                     break;
+                case "--unsafe-macros":
+                    options.AllowUnsafeMacros = true;
+                    break;
                 case "--help":
                 case "-h":
                     ShowHelp();
@@ -433,6 +436,7 @@ Options:
                        Insert a space before '('
       --no-space-around-operators
                        Disable spaces around operators
+      --unsafe-macros  Format files that contain function-like #define macros
   -h, --help           Show this help message
 
 Examples:

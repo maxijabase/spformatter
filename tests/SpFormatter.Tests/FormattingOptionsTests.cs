@@ -325,6 +325,8 @@ public class FormattingOptionsTests : FormatterTestBase
         defaultOptions.SpaceInArrayBrackets.Should().BeFalse();
         defaultOptions.NewLineAfterInclude.Should().BeTrue();
         defaultOptions.RequireSemicolons.Should().BeTrue();
+        defaultOptions.AllowSyntaxRecovery.Should().BeFalse();
+        defaultOptions.AllowUnsafeMacros.Should().BeFalse();
     }
 
     #endregion

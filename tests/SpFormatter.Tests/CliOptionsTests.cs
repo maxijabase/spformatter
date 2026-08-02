@@ -20,16 +20,45 @@ public class CliOptionsTests : IDisposable
         _tempDirectory = Path.Combine(Path.GetTempPath(), $"sp_formatter_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDirectory);
 
-        // Determine the CLI executable path (assuming it's built)
-        var currentDir = Directory.GetCurrentDirectory();
-        var projectRoot = FindProjectRoot(currentDir);
-        _cliPath = Path.Combine(projectRoot, "src", "SpFormatter.Cli", "bin", "Debug", "net10.0", "SpFormatter.Cli.exe");
-        
+        var projectRoot = FindProjectRoot(Directory.GetCurrentDirectory());
+        _cliPath = ResolveCliPath(projectRoot);
+
         if (!File.Exists(_cliPath))
         {
             throw new FileNotFoundException(
-                $"CLI binary missing at '{_cliPath}'. Build SpFormatter.Cli before running CLI tests.");
+                $"CLI binary missing at '{_cliPath}'. Build SpFormatter.Cli (Debug or Release) before running CLI tests.");
         }
+    }
+
+    private static string ResolveCliPath(string projectRoot)
+    {
+        // CI builds Release; local often uses Debug. Prefer the config matching this test assembly.
+        var configs = new List<string>();
+        var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var tfmDir = new DirectoryInfo(baseDir);
+        var configName = tfmDir.Parent?.Name;
+        if (!string.IsNullOrEmpty(configName)
+            && !configName.Equals("bin", StringComparison.OrdinalIgnoreCase))
+        {
+            configs.Add(configName);
+        }
+
+        configs.Add("Release");
+        configs.Add("Debug");
+
+        foreach (var config in configs.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var fileName in new[] { "SpFormatter.Cli.exe", "SpFormatter.Cli" })
+            {
+                var candidate = Path.Combine(
+                    projectRoot, "src", "SpFormatter.Cli", "bin", config, "net10.0", fileName);
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+        }
+
+        return Path.Combine(
+            projectRoot, "src", "SpFormatter.Cli", "bin", "Release", "net10.0", "SpFormatter.Cli.exe");
     }
 
     private static string FindProjectRoot(string startPath)
@@ -105,6 +134,7 @@ public class CliOptionsTests : IDisposable
         output.Should().Contain("Usage:");
         output.Should().Contain("--output");
         output.Should().Contain("--stdin");
+        output.Should().Contain("--unsafe-macros");
         output.Should().Contain("--quiet");
         output.Should().Contain("--dry-run");
         output.Should().Contain("--dir");

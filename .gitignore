@@ -432,3 +432,7 @@ FodyWeavers.xsd
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+# Macro corpus experiment outputs
+corpus/macro_abuse/formatted/
+corpus/macro_abuse/out/
+
