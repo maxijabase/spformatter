@@ -112,6 +112,9 @@ public sealed class AstPrinter
             case "fixed_dimension":
                 result = FormatArrayAccess(node);
                 return true;
+            case "array_literal":
+                result = FormatArrayLiteral(node, indentLevel);
+                return true;
             case "block":
                 result = FormatBlock(node, indentLevel);
                 return true;
@@ -1860,6 +1863,108 @@ public sealed class AstPrinter
         return _layout.JoinDeclarationParts(parts);
     }
 
+    private string FormatArrayLiteral(Node node, int indentLevel)
+    {
+        // Comments are not elements. JoinComma-ing them invents `{ /* a */, 3.2 }`.
+        // Commas after trailing comments (`{ 0.0 } /* x */,`) must stay attached.
+        // Line comments must not share a physical line with following elements.
+        var hasLineComment = false;
+        var elements = new List<string>();
+        string? current = null;
+        var currentHasComma = false;
+        var leadingComments = new List<string>();
+
+        void FlushCurrent()
+        {
+            if (current == null)
+                return;
+            elements.Add(current);
+            current = null;
+            currentHasComma = false;
+        }
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "{" or "}")
+                continue;
+
+            if (child.Type == ",")
+            {
+                // Keep the element open so trailing comments after `,` stay on it
+                // (`100, //note`), matching SourcePawn layout.
+                if (current != null)
+                {
+                    if (!currentHasComma)
+                    {
+                        current += ",";
+                        currentHasComma = true;
+                    }
+                }
+                else if (elements.Count > 0)
+                {
+                    var last = elements[^1];
+                    if (!last.EndsWith(','))
+                        elements[^1] = last + ",";
+                }
+
+                continue;
+            }
+
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0).Trim();
+                if (string.IsNullOrEmpty(comment))
+                    continue;
+
+                if (comment.StartsWith("//", StringComparison.Ordinal))
+                    hasLineComment = true;
+
+                if (current != null)
+                    current += " " + comment;
+                else
+                    leadingComments.Add(comment);
+
+                continue;
+            }
+
+            var value = _formatChild(child, 0);
+            if (string.IsNullOrEmpty(value))
+                continue;
+
+            if (current != null)
+            {
+                if (!currentHasComma)
+                    current += ",";
+                FlushCurrent();
+            }
+
+            if (leadingComments.Count > 0)
+            {
+                value = string.Join(" ", leadingComments) + " " + value;
+                leadingComments.Clear();
+            }
+
+            current = value;
+        }
+
+        FlushCurrent();
+        foreach (var comment in leadingComments)
+            elements.Add(comment);
+
+        if (elements.Count == 0)
+            return "{}";
+
+        if (!hasLineComment && !node.Text.Contains('\n'))
+            return "{ " + string.Join(" ", elements.Select(e => e.Trim())) + " }";
+
+        var innerIndent = _layout.Indent(indentLevel + 1);
+        var lines = new List<string> { "{" };
+        foreach (var element in elements)
+            lines.Add(innerIndent + element.Trim());
+        lines.Add(_layout.Indent(indentLevel) + "}");
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
     private string FormatSourceFile(Node node, int indentLevel)
     {
         var entries = new List<(Node Node, string Type, string Text)>();
@@ -2103,9 +2208,15 @@ public sealed class AstPrinter
 
             if (child.Type is "variable_declaration" or "old_variable_declaration")
             {
-                var nested = FormatVariableDeclarationInner(child);
+                var nested = FormatVariableDeclarationInner(child, indentLevel);
                 if (!string.IsNullOrEmpty(nested))
                     parts.Add(nested);
+                continue;
+            }
+
+            if (child.Type == "array_literal")
+            {
+                parts.Add(FormatArrayLiteral(child, indentLevel));
                 continue;
             }
 
@@ -2114,14 +2225,14 @@ public sealed class AstPrinter
                 parts.Add(formatted);
         }
 
-        var joined = _layout.JoinDeclarationParts(parts);
+        var joined = JoinDeclarationPartsBreakingAfterLineComments(parts, indentLevel);
         if (_layout.Options.RequireSemicolons && !joined.EndsWith(';'))
             joined += ";";
 
         return _layout.Indent(indentLevel) + joined;
     }
 
-    private string FormatVariableDeclarationInner(Node node)
+    private string FormatVariableDeclarationInner(Node node, int indentLevel)
     {
         var parts = new List<string>();
         foreach (var child in node.Children)
@@ -2129,12 +2240,56 @@ public sealed class AstPrinter
             if (child.Type == ";")
                 continue;
 
+            if (child.Type == "array_literal")
+            {
+                parts.Add(FormatArrayLiteral(child, indentLevel));
+                continue;
+            }
+
             var formatted = FormatDeclarationChild(child);
             if (!string.IsNullOrEmpty(formatted))
                 parts.Add(formatted);
         }
 
-        return _layout.JoinDeclarationParts(parts);
+        return JoinDeclarationPartsBreakingAfterLineComments(parts, indentLevel);
+    }
+
+    private string JoinDeclarationPartsBreakingAfterLineComments(
+        IReadOnlyList<string> parts,
+        int indentLevel)
+    {
+        // `= // comment` then `{ ... }` must not become `= // comment {` (brace eaten).
+        if (parts.Count == 0)
+            return string.Empty;
+
+        var groups = new List<List<string>> { new() { parts[0] } };
+        for (var i = 1; i < parts.Count; i++)
+        {
+            if (IsLineCommentText(parts[i - 1]))
+                groups.Add([parts[i]]);
+            else
+                groups[^1].Add(parts[i]);
+        }
+
+        var chunks = groups.Select(g => _layout.JoinDeclarationParts(g)).ToList();
+        if (chunks.Count == 1)
+            return chunks[0];
+
+        var result = new System.Text.StringBuilder(chunks[0]);
+        for (var i = 1; i < chunks.Count; i++)
+        {
+            result.Append(_layout.Options.LineEnding);
+            result.Append(_layout.Indent(indentLevel));
+            result.Append(chunks[i]);
+        }
+
+        return result.ToString();
+    }
+
+    private static bool IsLineCommentText(string text)
+    {
+        var trimmed = text.TrimStart();
+        return trimmed.StartsWith("//", StringComparison.Ordinal);
     }
 
     private string FormatDeclarationChild(Node child)
