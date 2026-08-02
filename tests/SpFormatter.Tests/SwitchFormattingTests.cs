@@ -18,6 +18,12 @@ public class SwitchFormattingTests : FormatterTestBase
     }
 
     [Fact]
+    public void Switch_preproc_around_cases_matches_golden()
+    {
+        AssertTestCaseFormatsCorrectly("ControlStructures/SwitchStatements/switch_preproc_cases");
+    }
+
+    [Fact]
     public void Bare_case_statement_body_is_idempotent()
     {
         const string input = """

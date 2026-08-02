@@ -1020,16 +1020,21 @@ public sealed class AstPrinter
     private string FormatSwitchStatement(Node node, int indentLevel)
     {
         Node? switchExpression = null;
-        var cases = new List<Node>();
+        var bodyEntries = new List<Node>();
         var inParens = false;
+        var inBody = false;
 
         foreach (var child in node.Children)
         {
             switch (child.Type)
             {
                 case "switch":
+                    continue;
                 case "{":
+                    inBody = true;
+                    continue;
                 case "}":
+                    inBody = false;
                     continue;
                 case "(":
                     inParens = true;
@@ -1038,12 +1043,26 @@ public sealed class AstPrinter
                     inParens = false;
                     continue;
                 case "switch_case":
-                    cases.Add(child);
+                    bodyEntries.Add(child);
                     continue;
             }
 
             if (inParens)
+            {
                 switchExpression ??= child;
+                continue;
+            }
+
+            if (!inBody)
+                continue;
+
+            // #if/#endif/#else around cases must stay; dropping them exposes
+            // undeclared symbols when the guarded cases remain.
+            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal)
+                || child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                bodyEntries.Add(child);
+            }
         }
 
         var indent = _layout.Indent(indentLevel);
@@ -1055,8 +1074,20 @@ public sealed class AstPrinter
             indent + "{"
         };
 
-        foreach (var caseNode in cases)
-            lines.Add(_formatChild(caseNode, indentLevel + 1));
+        foreach (var entry in bodyEntries)
+        {
+            if (entry.Type.StartsWith("preproc_", StringComparison.Ordinal))
+            {
+                var directive = _formatChild(entry, 0).TrimEnd('\r', '\n');
+                if (!string.IsNullOrWhiteSpace(directive))
+                    lines.Add(directive);
+                continue;
+            }
+
+            var formatted = _formatChild(entry, indentLevel + 1);
+            if (!string.IsNullOrWhiteSpace(formatted))
+                lines.Add(formatted);
+        }
 
         lines.Add(indent + "}");
         return string.Join(_layout.Options.LineEnding, lines);

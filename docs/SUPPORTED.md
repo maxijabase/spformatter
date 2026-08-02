@@ -36,7 +36,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; trailing comments after `)` stay on the if line; `#else` / `#endif` siblings mid-if are not treated as the body; no brace injection |
 | char_literal | Supported | `AstPrinter` prints `node.Text` (`'\0'` stays glued; was mis-typed as `character_literal`) |
 | for / while / do-while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing; `old_for_loop_variable_declaration_statement` (`new i = 0, s`) via declaration printer (no bogus `;` mid-header); `#else` / `#endif` siblings mid-for are not treated as the body; trailing `//` after `while (...)` stays on the while line and is not chosen as the body; `do { } //note while (...)` keeps `while` off the comment line |
-| switch / case | Supported | `AstPrinter`; case label spacing; block bodies and bare statement bodies after `:`; fall-through chains |
+| switch / case | Supported | `AstPrinter`; case label spacing; block bodies and bare statement bodies after `:`; fall-through chains; `#if`/`#endif`/`#else` siblings between cases stay at column 0 |
 | return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored; bare `return` + next-line `assignment_expression` (semicolon-0 misparse) is split into `return;` + assignment; multiline return values (ternary/paren/call) stay valued returns |
 | source newline normalization | Supported | CR-only and CRLF inputs are normalized to LF before parse (Tree-sitter otherwise treats CR-only files as one line) |
 | delete | Supported | `AstPrinter`; space after `delete` even when operand is indexed (`delete h_timer[X]`) |
