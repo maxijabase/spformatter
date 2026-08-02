@@ -2140,21 +2140,47 @@ public sealed class AstPrinter
 
     private string FormatParameterDeclarations(Node node)
     {
-        var parameters = new List<string>();
+        // Same rule as call args: comments are not parameters. JoinComma would turn
+        // `(client, /*const String:command[], */argc)` into `(client, /*...*/, argc)`.
+        var result = new System.Text.StringBuilder("(");
+        var pendingComments = new List<string>();
+        var seenParameter = false;
+        var commaSep = _layout.Options.SpaceAfterComma ? ", " : ",";
+
         foreach (var child in node.Children)
         {
-            if (child.Type is "(" or ")" or ",")
+            if (child.Type is "(" or ")")
                 continue;
 
-            var formatted = _formatChild(child, 0);
-            if (!string.IsNullOrEmpty(formatted))
-                parameters.Add(formatted);
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0);
+                if (!string.IsNullOrEmpty(comment))
+                    pendingComments.Add(comment);
+                continue;
+            }
+
+            if (child.Type == ",")
+            {
+                FlushCallArgComments(result, pendingComments, trailingSpace: false);
+                continue;
+            }
+
+            var parameter = _formatChild(child, 0);
+            if (string.IsNullOrEmpty(parameter))
+                continue;
+
+            if (seenParameter)
+                result.Append(commaSep);
+            seenParameter = true;
+
+            FlushCallArgComments(result, pendingComments, trailingSpace: true);
+            result.Append(parameter);
         }
 
-        if (parameters.Count == 0)
-            return "()";
-
-        return "(" + _layout.JoinComma(parameters) + ")";
+        FlushCallArgComments(result, pendingComments, trailingSpace: false);
+        result.Append(')');
+        return result.ToString();
     }
 
     private string FormatParameterDeclaration(Node node)

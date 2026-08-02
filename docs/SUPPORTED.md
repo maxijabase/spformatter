@@ -31,6 +31,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts`; old tags stay `Tag:name` |
 | old_type / old_type_cast | Supported | `AstPrinter`; colon glued (`Handle:x`, `Float:0`); no spaces around `:` |
 | function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed |
+| parameter list comments | Supported | same as call args: comments are not parameters (no invented `,` around `/* ... */`) |
 | native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
 | if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; trailing comments after `)` stay on the if line; no brace injection |
 | char_literal | Supported | `AstPrinter` prints `node.Text` (`'\0'` stays glued; was mis-typed as `character_literal`) |

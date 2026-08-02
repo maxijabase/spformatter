@@ -20,6 +20,7 @@ public class FunctionTests : FormatterTestBase
     [Theory]
     [InlineData("Functions/WithParameters/function_with_params")]
     [InlineData("Functions/WithParameters/function_no_space_params")]
+    [InlineData("Functions/Parameters/param_block_comment")]
     public void FunctionDeclarationsWithParameters_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
