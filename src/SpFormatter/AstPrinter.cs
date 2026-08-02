@@ -36,6 +36,7 @@ public sealed class AstPrinter
                 return true;
             case "unary_expression":
             case "update_expression":
+            case "preproc_unary_expression":
                 result = FormatUnaryOrUpdateExpression(node);
                 return true;
             case "assignment_expression":
@@ -2191,16 +2192,25 @@ public sealed class AstPrinter
         // Comments are not elements. JoinComma-ing them invents `{ /* a */, 3.2 }`.
         // Commas after trailing comments (`{ 0.0 } /* x */,`) must stay attached.
         // Line comments must not share a physical line with following elements.
+        // Comma must come before `//` (`elem, //note`); `elem //note,` loses the comma
+        // on re-parse because `//` eats the rest of the line.
         var hasLineComment = false;
         var elements = new List<string>();
         string? current = null;
         var currentHasComma = false;
+        string? pendingLineComment = null;
         var leadingComments = new List<string>();
 
         void FlushCurrent()
         {
             if (current == null)
                 return;
+            if (pendingLineComment != null)
+            {
+                current += " " + pendingLineComment;
+                pendingLineComment = null;
+            }
+
             elements.Add(current);
             current = null;
             currentHasComma = false;
@@ -2222,12 +2232,33 @@ public sealed class AstPrinter
                         current += ",";
                         currentHasComma = true;
                     }
+
+                    if (pendingLineComment != null)
+                    {
+                        current += " " + pendingLineComment;
+                        pendingLineComment = null;
+                        FlushCurrent();
+                    }
                 }
                 else if (elements.Count > 0)
                 {
                     var last = elements[^1];
-                    if (!last.EndsWith(','))
+                    // Prefer inserting `,` before a trailing `//` on the prior element.
+                    var lineCommentAt = last.IndexOf(" //", StringComparison.Ordinal);
+                    if (lineCommentAt < 0 && last.StartsWith("//", StringComparison.Ordinal))
+                        lineCommentAt = -1;
+                    if (lineCommentAt > 0 && last.AsSpan(0, lineCommentAt).TrimEnd().EndsWith(","))
+                    {
+                        // already has comma before comment
+                    }
+                    else if (lineCommentAt > 0)
+                    {
+                        elements[^1] = last[..lineCommentAt] + "," + last[lineCommentAt..];
+                    }
+                    else if (!last.EndsWith(','))
+                    {
                         elements[^1] = last + ",";
+                    }
                 }
 
                 continue;
@@ -2247,8 +2278,16 @@ public sealed class AstPrinter
                     // where `//` eats the row.
                     if (current != null)
                     {
-                        current += " " + comment;
-                        FlushCurrent();
+                        if (currentHasComma)
+                        {
+                            current += " " + comment;
+                            FlushCurrent();
+                        }
+                        else
+                        {
+                            // Wait for a following `,` so we can emit `elem, //note`.
+                            pendingLineComment = comment;
+                        }
                     }
                     else
                     {

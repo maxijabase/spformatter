@@ -47,7 +47,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | comments | Supported | `AstPrinter`; indent only, text preserved |
 | ternary | Supported | `AstPrinter` honors `SpaceAroundOperators` |
 | arrays / indexed access | Supported | `array_access` / `array_indexed_access` / `fixed_dimension` in `AstPrinter`; `SpaceInArrayBrackets` via options |
-| array_literal | Supported | `AstPrinter`; compact when single-line; multiline when source has newlines or `//` comments; trailing/leading block comments stay on elements (no invented commas); commas after comments preserved; leading `//` comments are their own lines (not prefixed onto the next row) |
+| array_literal | Supported | `AstPrinter`; compact when single-line; multiline when source has newlines or `//` comments; trailing/leading block comments stay on elements (no invented commas); commas stay before trailing `//` (`elem, //note`) so re-parse cannot eat them; leading `//` comments are their own lines; `preproc_unary_expression` negatives stay glued (`-1`) |
 | declaration `//` before initializer | Supported | line comment after `=` breaks before `{` / following declarators so `//` cannot eat the rest of the line |
 | source_file top-level order | Supported | preserves declaration order; no silent include/function bucketing |
 | expression fragments (no full file) | Recovery-only | gated by `AllowSyntaxRecovery`; fail-closed by default |
