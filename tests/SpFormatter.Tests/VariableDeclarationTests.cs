@@ -10,6 +10,7 @@ public class VariableDeclarationTests : FormatterTestBase
     [Theory]
     [InlineData("Variables/SimpleDeclarations/simple_variable")]
     [InlineData("Variables/SimpleDeclarations/simple_variable_spaces")]
+    [InlineData("Variables/SimpleDeclarations/decl_trailing_line_comment")]
     public void SimpleVariableDeclarations_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
