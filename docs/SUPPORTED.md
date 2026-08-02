@@ -56,7 +56,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | typeset | Supported | `AstPrinter`; member `typedef_expression`s; brace layout matches STYLE |
 | functag | Supported | `AstPrinter`; `old_type` prints as `Tag:` without spaces around `:` |
 | funcenum | Supported | `AstPrinter`; members keep trailing commas; brace layout matches STYLE |
-| struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; trailing `;` |
+| struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; trailing `;`; field comments stay on the prior field; preprocessor lines keep column 0 and get no invented trailing `,` |
 | enum | Supported | `AstPrinter`; named/anon, optional increment `(<<= n)`, trailing commas + `;` |
 | alias_declaration / alias_assignment | Supported | `AstPrinter`; `operator++` / `operator*` stay glued; legacy overloads kept on purpose |
 

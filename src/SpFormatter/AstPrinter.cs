@@ -1758,11 +1758,43 @@ public sealed class AstPrinter
 
     private string FormatStructConstructor(Node node, int indentLevel)
     {
+        // Comments and preprocessor lines are not fields. Treating them as fields invents
+        // `/* x */,` / `#endif,` and breaks re-parse.
         var fields = new List<(Node Node, string Text)>();
         foreach (var child in node.Children)
         {
             if (child.Type is "{" or "}" or "," or ";")
                 continue;
+
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0).Trim();
+                if (string.IsNullOrEmpty(comment))
+                    continue;
+
+                if (fields.Count > 0)
+                {
+                    var last = fields[^1];
+                    fields[^1] = (last.Node, last.Text.TrimEnd() + " " + comment);
+                }
+                else
+                {
+                    fields.Add((child, _layout.Indent(indentLevel + 1) + comment));
+                }
+
+                continue;
+            }
+
+            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal))
+            {
+                var directive = _formatChild(child, 0).TrimEnd('\r', '\n');
+                if (string.IsNullOrWhiteSpace(directive))
+                    continue;
+
+                // Keep directives at column 0; only fields are indented inside the constructor.
+                fields.Add((child, directive));
+                continue;
+            }
 
             var field = _formatChild(child, indentLevel + 1);
             if (string.IsNullOrWhiteSpace(field))
@@ -1774,7 +1806,8 @@ public sealed class AstPrinter
             fields.Add((child, line));
         }
 
-        if (!_layout.Options.NewLineAfterOpenBrace)
+        var hasPreprocessor = fields.Any(f => f.Node.Type.StartsWith("preproc_", StringComparison.Ordinal));
+        if (!_layout.Options.NewLineAfterOpenBrace && !hasPreprocessor)
         {
             var inner = _layout.JoinComma(fields.Select(f => f.Text.Trim().TrimEnd(',')));
             return "{ " + inner + " };";
