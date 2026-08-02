@@ -45,7 +45,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | includes / preprocessor directives | Supported | `AstPrinter` prints directive `node.Text` (trim trailing CR/LF only); SortIncludes remains opt-in at source_file; `#define` values with `http://` rejoined when the lexer splits them into define + `//` comment |
 | function-like macros (`#define Name(`) | Partial | **refused by default** (`AllowUnsafeMacros` / `--unsafe-macros` to override). AST rewrite cannot see expansions; formatting can break compiling plugins (see `corpus/macro_abuse/`). Object-like `#define NAME value` is fine. |
 | comments | Supported | `AstPrinter`; indent only, text preserved |
-| ternary | Supported | `AstPrinter` honors `SpaceAroundOperators` |
+| ternary | Supported | `AstPrinter` honors `SpaceAroundOperators`; mid-ternary comments stay attached and do not replace the condition/arms |
 | arrays / indexed access | Supported | `array_access` / `array_indexed_access` / `fixed_dimension` in `AstPrinter`; `SpaceInArrayBrackets` via options |
 | array_literal | Supported | `AstPrinter`; compact when single-line; multiline when source has newlines or `//` comments; trailing/leading block comments stay on elements (no invented commas); commas stay before trailing `//` (`elem, //note`) so re-parse cannot eat them; leading `//` comments are their own lines; `preproc_unary_expression` negatives stay glued (`-1`) |
 | declaration `//` before initializer | Supported | line comment after `=` breaks before `{` / following declarators so `//` cannot eat the rest of the line |
@@ -61,7 +61,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | typeset | Supported | `AstPrinter`; member `typedef_expression`s; brace layout matches STYLE |
 | functag | Supported | `AstPrinter`; `old_type` prints as `Tag:` without spaces around `:` |
 | funcenum | Supported | `AstPrinter`; members keep trailing commas; brace layout matches STYLE |
-| struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; trailing `;`; field comments stay on the prior field; preprocessor lines keep column 0 and get no invented trailing `,`; trailing `} //note` stays after the constructor (not on the `myinfo` header) |
+| struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; trailing `;`; field comments stay on the prior field; preprocessor lines keep column 0 and get no invented trailing `,`; trailing `} //note` stays after the constructor; comments between `=` and `{` stay on their own line |
 | enum | Supported | `AstPrinter`; named/anon, optional increment `(<<= n)`, trailing commas + `;` |
 | alias_declaration / alias_assignment | Supported | `AstPrinter`; `operator++` / `operator*` stay glued; legacy overloads kept on purpose |
 

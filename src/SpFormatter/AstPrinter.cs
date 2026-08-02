@@ -2113,13 +2113,17 @@ public sealed class AstPrinter
     {
         var headerParts = new List<string>();
         string? constructor = null;
+        var midComments = new List<string>();
         var trailingComments = new List<string>();
+        var seenEquals = false;
 
         foreach (var child in node.Children)
         {
             switch (child.Type)
             {
                 case "=":
+                    seenEquals = true;
+                    break;
                 case ";":
                     break;
                 case "struct_constructor":
@@ -2139,8 +2143,11 @@ public sealed class AstPrinter
 
                     // Trailing `} //note` must stay after the constructor. Putting it in
                     // the header yields `myinfo//note =` and `//` eats the `=`.
+                    // Comments between `=` and `{` stay on their own line after `=`.
                     if (constructor != null)
                         trailingComments.Add(comment);
+                    else if (seenEquals)
+                        midComments.Add(comment);
                     else if (headerParts.Count > 0)
                         headerParts[^1] = headerParts[^1] + " " + comment;
                     else
@@ -2158,12 +2165,20 @@ public sealed class AstPrinter
         if (constructor == null)
             return header + ";";
 
-        string result;
-        if (!_layout.Options.NewLineAfterOpenBrace)
-            result = header + " " + constructor.TrimStart();
-        else
-            result = header + _layout.Options.LineEnding + constructor;
+        var parts = new List<string> { header };
+        foreach (var mid in midComments)
+            parts.Add(mid);
 
+        if (!_layout.Options.NewLineAfterOpenBrace && midComments.Count == 0)
+        {
+            var compact = header + " " + constructor.TrimStart();
+            if (trailingComments.Count > 0)
+                compact = compact.TrimEnd('\r', '\n') + " " + string.Join(" ", trailingComments);
+            return compact;
+        }
+
+        parts.Add(constructor);
+        var result = string.Join(_layout.Options.LineEnding, parts);
         if (trailingComments.Count > 0)
             result = result.TrimEnd('\r', '\n') + " " + string.Join(" ", trailingComments);
 
@@ -3319,6 +3334,8 @@ public sealed class AstPrinter
         Node? condition = null;
         Node? consequence = null;
         Node? alternative = null;
+        string? conditionComment = null;
+        string? consequenceComment = null;
         var sawQuestion = false;
 
         foreach (var child in node.Children)
@@ -3332,6 +3349,21 @@ public sealed class AstPrinter
             if (child.Type == ":")
                 continue;
 
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0).Trim();
+                if (string.IsNullOrEmpty(comment))
+                    continue;
+
+                // Do not let comments replace the condition/arms. A mid-ternary
+                // `/*note*/` after the condition used to overwrite it entirely.
+                if (!sawQuestion)
+                    conditionComment = comment;
+                else if (consequence != null && alternative == null)
+                    consequenceComment = comment;
+                continue;
+            }
+
             if (!sawQuestion)
                 condition = child;
             else if (consequence == null)
@@ -3341,7 +3373,11 @@ public sealed class AstPrinter
         }
 
         var conditionText = condition != null ? _formatChild(condition, 0) : "";
+        if (conditionComment != null)
+            conditionText += " " + conditionComment;
         var consequenceText = consequence != null ? _formatChild(consequence, 0) : "";
+        if (consequenceComment != null)
+            consequenceText += " " + consequenceComment;
         var alternativeText = alternative != null ? _formatChild(alternative, 0) : "";
         var question = _layout.Options.SpaceAroundOperators ? " ? " : "?";
         var colon = _layout.Options.SpaceAroundOperators ? " : " : ":";
