@@ -2598,6 +2598,13 @@ public sealed class AstPrinter
         }
 
         FlushCallArgComments(result, pendingComments, trailingSpace: false);
+        // A trailing `//` comment must not share a line with the closing `)`.
+        if (breakBeforeNextArg)
+        {
+            result.Append(_layout.Options.LineEnding);
+            result.Append(_layout.Indent(indentLevel));
+        }
+
         result.Append(')');
         return result.ToString();
     }
