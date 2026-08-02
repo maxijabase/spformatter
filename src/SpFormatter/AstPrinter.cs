@@ -1096,24 +1096,91 @@ public sealed class AstPrinter
 
     private string FormatSwitchCase(Node node, int indentLevel)
     {
-        var caseLineParts = new List<string>();
+        var labelLines = new List<string>();
+        var currentLabel = new System.Text.StringBuilder();
         var bodyNodes = new List<Node>();
         var foundColon = false;
+        string? pendingLineComment = null;
+        var indent = _layout.Indent(indentLevel);
+        var contIndent = _layout.Indent(indentLevel + 1);
+
+        void FlushPendingComment()
+        {
+            if (pendingLineComment == null)
+                return;
+            currentLabel.Append(' ').Append(pendingLineComment);
+            pendingLineComment = null;
+            labelLines.Add(currentLabel.ToString());
+            currentLabel.Clear();
+        }
 
         foreach (var child in node.Children)
         {
             if (!foundColon)
             {
-                var formatted = child.Type is "case" or "default" or ":" or ","
+                if (child.Type is "comment" or "line_comment" or "block_comment")
+                {
+                    var comment = _formatChild(child, 0).Trim();
+                    if (string.IsNullOrEmpty(comment))
+                        continue;
+
+                    if (comment.StartsWith("//", StringComparison.Ordinal))
+                    {
+                        // `case 'm', //note 'p'` must break after the comment; otherwise
+                        // `//` eats the remaining values on one physical line.
+                        pendingLineComment = comment;
+                        continue;
+                    }
+
+                    currentLabel.Append(' ').Append(comment);
+                    continue;
+                }
+
+                if (child.Type == ",")
+                {
+                    currentLabel.Append(',');
+                    if (pendingLineComment != null)
+                        FlushPendingComment();
+                    continue;
+                }
+
+                if (child.Type == ":")
+                {
+                    currentLabel.Append(':');
+                    if (pendingLineComment != null)
+                        FlushPendingComment();
+                    foundColon = true;
+                    continue;
+                }
+
+                var formatted = child.Type is "case" or "default"
                     ? child.Text
                     : _formatChild(child, 0);
-
                 if (string.IsNullOrEmpty(formatted))
                     continue;
 
-                if (formatted == ":")
-                    foundColon = true;
-                caseLineParts.Add(formatted);
+                // A value after `value, //note` starts a new label line.
+                if (pendingLineComment != null)
+                    FlushPendingComment();
+
+                if (currentLabel.Length == 0)
+                {
+                    currentLabel.Append(formatted);
+                }
+                else if (currentLabel.ToString().TrimEnd().EndsWith("case", StringComparison.Ordinal)
+                    || currentLabel.ToString().TrimEnd().EndsWith("default", StringComparison.Ordinal))
+                {
+                    currentLabel.Append(' ').Append(formatted);
+                }
+                else if (currentLabel.ToString().EndsWith(','))
+                {
+                    currentLabel.Append(_layout.Options.SpaceAfterComma ? " " : "").Append(formatted);
+                }
+                else
+                {
+                    currentLabel.Append(' ').Append(formatted);
+                }
+
                 continue;
             }
 
@@ -1122,49 +1189,46 @@ public sealed class AstPrinter
             bodyNodes.Add(child);
         }
 
-        var caseLineText = new System.Text.StringBuilder();
-        for (var i = 0; i < caseLineParts.Count; i++)
+        if (pendingLineComment != null)
+            FlushPendingComment();
+        if (currentLabel.Length > 0)
+            labelLines.Add(currentLabel.ToString());
+
+        var lines = new List<string>();
+        for (var i = 0; i < labelLines.Count; i++)
         {
-            var part = caseLineParts[i];
-            if (i == 0)
-            {
-                caseLineText.Append(part);
-                continue;
-            }
-
-            if (part == ":" || part == ",")
-            {
-                caseLineText.Append(part);
-                continue;
-            }
-
-            if (caseLineParts[i - 1] == "case")
-            {
-                caseLineText.Append(' ').Append(part);
-                continue;
-            }
-
-            if (caseLineParts[i - 1] == ",")
-            {
-                caseLineText.Append(_layout.Options.SpaceAfterComma ? " " + part : part);
-                continue;
-            }
-
-            caseLineText.Append(' ').Append(part);
+            var label = labelLines[i].Trim();
+            lines.Add(i == 0 ? indent + label : contIndent + label);
         }
 
-        var lines = new List<string>
+        // Pull trailing `//` after `:` onto the label before choosing block vs bare body.
+        var statementBodies = new List<Node>();
+        foreach (var body in bodyNodes)
         {
-            _layout.Indent(indentLevel) + caseLineText
-        };
+            if (body.Type is "comment" or "line_comment" or "block_comment"
+                && lines.Count > 0)
+            {
+                var comment = _formatChild(body, 0).Trim();
+                if (!string.IsNullOrEmpty(comment)
+                    && comment.StartsWith("//", StringComparison.Ordinal)
+                    && lines[^1].TrimEnd().EndsWith(':')
+                    && statementBodies.Count == 0)
+                {
+                    lines[^1] = lines[^1].TrimEnd() + " " + comment;
+                    continue;
+                }
+            }
 
-        if (bodyNodes.Count == 1 && bodyNodes[0].Type == "block")
+            statementBodies.Add(body);
+        }
+
+        if (statementBodies.Count == 1 && statementBodies[0].Type == "block")
         {
-            lines.Add(_formatChild(bodyNodes[0], indentLevel));
+            lines.Add(_formatChild(statementBodies[0], indentLevel));
         }
         else
         {
-            foreach (var body in bodyNodes)
+            foreach (var body in statementBodies)
             {
                 var formatted = _formatChild(body, indentLevel + 1);
                 if (string.IsNullOrWhiteSpace(formatted))
@@ -2049,6 +2113,7 @@ public sealed class AstPrinter
     {
         var headerParts = new List<string>();
         string? constructor = null;
+        var trailingComments = new List<string>();
 
         foreach (var child in node.Children)
         {
@@ -2065,6 +2130,22 @@ public sealed class AstPrinter
                     if (headerParts.Count > 0)
                         headerParts[^1] = headerParts[^1] + ":";
                     break;
+                case "comment":
+                case "line_comment":
+                case "block_comment":
+                    var comment = _formatChild(child, 0).Trim();
+                    if (string.IsNullOrEmpty(comment))
+                        break;
+
+                    // Trailing `} //note` must stay after the constructor. Putting it in
+                    // the header yields `myinfo//note =` and `//` eats the `=`.
+                    if (constructor != null)
+                        trailingComments.Add(comment);
+                    else if (headerParts.Count > 0)
+                        headerParts[^1] = headerParts[^1] + " " + comment;
+                    else
+                        headerParts.Add(comment);
+                    break;
                 default:
                     var part = _formatChild(child, 0);
                     if (!string.IsNullOrEmpty(part))
@@ -2077,10 +2158,16 @@ public sealed class AstPrinter
         if (constructor == null)
             return header + ";";
 
+        string result;
         if (!_layout.Options.NewLineAfterOpenBrace)
-            return header + " " + constructor.TrimStart();
+            result = header + " " + constructor.TrimStart();
+        else
+            result = header + _layout.Options.LineEnding + constructor;
 
-        return header + _layout.Options.LineEnding + constructor;
+        if (trailingComments.Count > 0)
+            result = result.TrimEnd('\r', '\n') + " " + string.Join(" ", trailingComments);
+
+        return result;
     }
 
     private string FormatStructConstructor(Node node, int indentLevel)

@@ -24,6 +24,12 @@ public class SwitchFormattingTests : FormatterTestBase
     }
 
     [Fact]
+    public void Switch_case_value_comments_matches_golden()
+    {
+        AssertTestCaseFormatsCorrectly("ControlStructures/SwitchStatements/switch_case_value_comments");
+    }
+
+    [Fact]
     public void Bare_case_statement_body_is_idempotent()
     {
         const string input = """

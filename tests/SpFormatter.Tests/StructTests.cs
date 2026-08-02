@@ -8,6 +8,7 @@ public class StructTests : FormatterTestBase
     [InlineData("Structs/Basic/simple_struct")]
     [InlineData("Structs/Basic/struct_field_comments")]
     [InlineData("Structs/Basic/struct_preproc_fields")]
+    [InlineData("Structs/Basic/struct_trailing_comment")]
     public void Structs_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
