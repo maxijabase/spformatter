@@ -84,6 +84,7 @@ public sealed class AstPrinter
             case "old_global_variable_declaration":
             case "old_variable_declaration":
             case "old_variable_declaration_statement":
+            case "old_for_loop_variable_declaration_statement":
                 result = FormatVariableDeclaration(node, indentLevel);
                 return true;
             case "old_type_cast":

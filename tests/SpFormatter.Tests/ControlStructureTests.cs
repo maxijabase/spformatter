@@ -19,6 +19,7 @@ public class ControlStructureTests : FormatterTestBase
     [Theory]
     [InlineData("ControlStructures/ForLoops/for_simple")]
     [InlineData("ControlStructures/ForLoops/for_no_spaces")]
+    [InlineData("ControlStructures/ForLoops/for_old_multi_decl")]
     public void ForLoops_ShouldFormatExactly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
