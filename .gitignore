@@ -440,3 +440,6 @@ corpus/macro_abuse/out/
 # Local probe reports
 artifacts/
 
+# Session scratch under tools/ (keep corpus-*.cs)
+tools/_*
+

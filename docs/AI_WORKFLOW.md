@@ -64,3 +64,21 @@ leave other node types on the legacy formatter until their turn.
 4. Real-plugin corpus later (few files)
 
 Exact byte goldens are fine for a single rule. Do not multiply near-duplicate goldens.
+
+## Corpus confidence layers (local tools)
+
+Scripts under `tools/` (see `tools/README.md`). Session scratch `tools/_*` is gitignored.
+
+1. **Format / re-parse** — `tools/corpus-probe.cs`  
+   Fast. Catches invented commas, swallowed braces, mangled headers.
+2. **Compile-preserve** — `tools/corpus-compile-probe.cs`  
+   Slower. Runs `spcomp --syntax-only` (dry-run, **no `.smx`**) on original vs formatted.  
+   Watch `compile_broke`: baseline compiled, formatted did not.
+
+```powershell
+dotnet run tools/corpus-compile-probe.cs -- <corpusRoot> `
+  --spcomp C:\path\to\spcomp.exe `
+  --include C:\path\to\include `
+  --limit 200 `
+  --out artifacts/corpus-compile-probe-report.json
+```
