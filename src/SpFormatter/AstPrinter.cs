@@ -1984,7 +1984,23 @@ public sealed class AstPrinter
                     continue;
 
                 if (comment.StartsWith("//", StringComparison.Ordinal))
+                {
                     hasLineComment = true;
+                    // Line comments before an element must be their own lines.
+                    // Prefixing `// note` onto `{ "pills" }` yields one physical line
+                    // where `//` eats the row.
+                    if (current != null)
+                    {
+                        current += " " + comment;
+                        FlushCurrent();
+                    }
+                    else
+                    {
+                        elements.Add(comment);
+                    }
+
+                    continue;
+                }
 
                 if (current != null)
                     current += " " + comment;

@@ -38,6 +38,7 @@ public class VariableDeclarationTests : FormatterTestBase
     [InlineData("Variables/ArrayLiterals/array_literal_line_comments")]
     [InlineData("Variables/ArrayLiterals/array_literal_row_comments")]
     [InlineData("Variables/ArrayLiterals/array_literal_comment_before_brace")]
+    [InlineData("Variables/ArrayLiterals/array_literal_leading_line_comments")]
     public void ArrayDeclarations_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
