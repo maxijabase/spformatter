@@ -769,30 +769,29 @@ public sealed class AstPrinter
     private string FormatSwitchCase(Node node, int indentLevel)
     {
         var caseLineParts = new List<string>();
-        Node? caseBody = null;
+        var bodyNodes = new List<Node>();
         var foundColon = false;
 
         foreach (var child in node.Children)
         {
-            if (child.Type == "block")
+            if (!foundColon)
             {
-                caseBody = child;
+                var formatted = child.Type is "case" or "default" or ":" or ","
+                    ? child.Text
+                    : _formatChild(child, 0);
+
+                if (string.IsNullOrEmpty(formatted))
+                    continue;
+
+                if (formatted == ":")
+                    foundColon = true;
+                caseLineParts.Add(formatted);
                 continue;
             }
 
-            if (foundColon)
-                continue;
-
-            var formatted = child.Type is "case" or "default" or ":" or ","
-                ? child.Text
-                : _formatChild(child, 0);
-
-            if (string.IsNullOrEmpty(formatted))
-                continue;
-
-            if (formatted == ":")
-                foundColon = true;
-            caseLineParts.Add(formatted);
+            // Bare statements after ':' (not only block bodies). Dropping these made
+            // `case 1: Foo();` print as an empty `case 1:` and broke re-parse.
+            bodyNodes.Add(child);
         }
 
         var caseLineText = new System.Text.StringBuilder();
@@ -831,8 +830,29 @@ public sealed class AstPrinter
             _layout.Indent(indentLevel) + caseLineText
         };
 
-        if (caseBody != null)
-            lines.Add(_formatChild(caseBody, indentLevel));
+        if (bodyNodes.Count == 1 && bodyNodes[0].Type == "block")
+        {
+            lines.Add(_formatChild(bodyNodes[0], indentLevel));
+        }
+        else
+        {
+            foreach (var body in bodyNodes)
+            {
+                var formatted = _formatChild(body, indentLevel + 1);
+                if (string.IsNullOrWhiteSpace(formatted))
+                    continue;
+
+                if (_layout.Options.RequireSemicolons
+                    && NeedsStatementSemicolon(body.Type)
+                    && !formatted.TrimEnd().EndsWith(';')
+                    && !formatted.Contains('{'))
+                {
+                    formatted = formatted.TrimEnd() + ";";
+                }
+
+                lines.Add(formatted);
+            }
+        }
 
         return string.Join(_layout.Options.LineEnding, lines);
     }
