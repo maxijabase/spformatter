@@ -2306,7 +2306,8 @@ public sealed class AstPrinter
 
     private string FormatSourceFile(Node node, int indentLevel)
     {
-        var entries = new List<(Node Node, string Type, string Text)>();
+        // EndIndex may differ from Node.EndIndex when sibling nodes are rejoined.
+        var entries = new List<(Node Node, string Type, string Text, int EndIndex)>();
         var children = node.Children;
 
         for (var i = 0; i < children.Count; i++)
@@ -2326,8 +2327,25 @@ public sealed class AstPrinter
                     children[i + 1].EndIndex - child.StartIndex);
                 merged = merged.TrimEnd('\r', '\n');
                 if (!string.IsNullOrWhiteSpace(merged))
-                    entries.Add((child, child.Type, merged));
+                    entries.Add((child, child.Type, merged, children[i + 1].EndIndex));
                 i++;
+                continue;
+            }
+
+            // `Handle` / `#if` / `hFwd, #endif, hCookies;` is split into a bare
+            // old_global type carrier, sibling directives, then a declarator list.
+            // Printing `Handle;` invents a bogus statement and leaves bare names.
+            if (TryFormatSplitOldGlobalWithPreproc(
+                    children,
+                    i,
+                    indentLevel,
+                    out var rejoined,
+                    out var consumedThrough,
+                    out var spanStart,
+                    out var spanEnd))
+            {
+                entries.Add((spanStart, child.Type, rejoined, spanEnd.EndIndex));
+                i = consumedThrough;
                 continue;
             }
 
@@ -2338,7 +2356,7 @@ public sealed class AstPrinter
                 if (TryAttachSameLineTrailingComment(asSiblings, child, out var attached))
                 {
                     var last = entries[^1];
-                    entries[^1] = (attached.Node, last.Type, attached.Text);
+                    entries[^1] = (attached.Node, last.Type, attached.Text, attached.Node.EndIndex);
                     continue;
                 }
             }
@@ -2346,7 +2364,7 @@ public sealed class AstPrinter
             var formatted = _formatChild(child, indentLevel);
             if (string.IsNullOrWhiteSpace(formatted))
                 continue;
-            entries.Add((child, child.Type, formatted));
+            entries.Add((child, child.Type, formatted, child.EndIndex));
         }
 
         if (_layout.Options.SortIncludes)
@@ -2380,14 +2398,102 @@ public sealed class AstPrinter
                 chunks.Add("");
         }
 
-        chunks.AddRange(JoinSiblingChunks(
-            entries.Select(e => (e.Node, e.Text)).ToList(),
+        chunks.AddRange(JoinSiblingChunksWithEnds(
+            entries.Select(e => (e.Node, e.Text, e.EndIndex)).ToList(),
             forceBlankAfter));
 
         return CleanUpEmptyLines(string.Join(_layout.Options.LineEnding, chunks));
     }
 
-    private static void SortIncludeRuns(List<(Node Node, string Type, string Text)> entries)
+    private bool TryFormatSplitOldGlobalWithPreproc(
+        IReadOnlyList<Node> children,
+        int start,
+        int indentLevel,
+        out string formatted,
+        out int consumedThrough,
+        out Node spanStart,
+        out Node spanEnd)
+    {
+        formatted = "";
+        consumedThrough = start;
+        spanStart = children[start];
+        spanEnd = children[start];
+
+        var carrier = children[start];
+        if (!IsBareOldGlobalTypeCarrier(carrier))
+            return false;
+
+        var j = start + 1;
+        var directives = new List<Node>();
+        while (j < children.Count
+            && (children[j].Type.StartsWith("preproc_", StringComparison.Ordinal)
+                || children[j].Type is "comment" or "line_comment" or "block_comment"))
+        {
+            directives.Add(children[j]);
+            j++;
+        }
+
+        if (directives.Count == 0
+            || j >= children.Count
+            || !IsOldGlobalDeclaratorContinuation(children[j]))
+        {
+            return false;
+        }
+
+        // Need at least one preprocessor directive between type and names.
+        if (!directives.Any(d => d.Type.StartsWith("preproc_", StringComparison.Ordinal)))
+            return false;
+
+        var indent = _layout.Indent(indentLevel);
+        var lines = new List<string> { indent + carrier.Text.Trim() };
+        foreach (var dir in directives)
+        {
+            var text = _formatChild(dir, 0).TrimEnd('\r', '\n');
+            if (!string.IsNullOrWhiteSpace(text))
+                lines.Add(text);
+        }
+
+        var continuation = _formatChild(children[j], indentLevel);
+        if (!string.IsNullOrWhiteSpace(continuation))
+            lines.Add(continuation);
+
+        formatted = string.Join(_layout.Options.LineEnding, lines);
+        consumedThrough = j;
+        spanStart = carrier;
+        spanEnd = children[j];
+        return true;
+    }
+
+    private static bool IsBareOldGlobalTypeCarrier(Node node)
+    {
+        if (node.Type != "old_global_variable_declaration")
+            return false;
+
+        // `Handle` alone: one old_variable_declaration with a single identifier.
+        var decls = node.Children.Where(c => c.Type == "old_variable_declaration").ToList();
+        if (decls.Count != 1)
+            return false;
+
+        var decl = decls[0];
+        return decl.Children.Count == 1 && decl.Children[0].Type == "identifier";
+    }
+
+    private static bool IsOldGlobalDeclaratorContinuation(Node node)
+    {
+        if (node.Type != "old_global_variable_declaration")
+            return false;
+
+        // Continuation lists have no type/old_type child; only names, commas, preproc, `;`.
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "type" or "old_type" or "builtin_type")
+                return false;
+        }
+
+        return node.Children.Any(c => c.Type == "old_variable_declaration");
+    }
+
+    private static void SortIncludeRuns(List<(Node Node, string Type, string Text, int EndIndex)> entries)
     {
         var i = 0;
         while (i < entries.Count)
@@ -2416,6 +2522,15 @@ public sealed class AstPrinter
         IReadOnlyList<(Node Node, string Text)> siblings,
         ISet<int>? forceBlankAfterIndexes = null)
     {
+        return JoinSiblingChunksWithEnds(
+            siblings.Select(s => (s.Node, s.Text, s.Node.EndIndex)).ToList(),
+            forceBlankAfterIndexes);
+    }
+
+    private List<string> JoinSiblingChunksWithEnds(
+        IReadOnlyList<(Node Node, string Text, int EndIndex)> siblings,
+        ISet<int>? forceBlankAfterIndexes = null)
+    {
         var chunks = new List<string>();
         if (siblings.Count == 0)
             return chunks;
@@ -2432,12 +2547,12 @@ public sealed class AstPrinter
             var blanks = 0;
             if (_layout.Options.PreserveEmptyLines && !string.IsNullOrEmpty(_source))
             {
-                var prev = siblings[i].Node;
+                var prevEnd = siblings[i].EndIndex;
                 var next = siblings[i + 1].Node;
-                if (prev.EndIndex < next.StartIndex && next.StartIndex <= _source.Length)
+                if (prevEnd < next.StartIndex && next.StartIndex <= _source.Length)
                 {
                     blanks = LayoutRules.CountBlankLinesInGap(
-                        _source.AsSpan(prev.EndIndex, next.StartIndex - prev.EndIndex));
+                        _source.AsSpan(prevEnd, next.StartIndex - prevEnd));
                 }
             }
 
