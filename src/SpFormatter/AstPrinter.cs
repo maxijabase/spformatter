@@ -418,6 +418,13 @@ public sealed class AstPrinter
             if (child.Type is "{" or "}")
                 continue;
 
+            if ((child.Type is "comment" or "line_comment" or "block_comment")
+                && TryAttachSameLineTrailingComment(siblings, child, out var withComment))
+            {
+                siblings[^1] = withComment;
+                continue;
+            }
+
             var formatted = _formatChild(child, indentLevel + 1);
             if (string.IsNullOrWhiteSpace(formatted))
                 continue;
@@ -437,6 +444,32 @@ public sealed class AstPrinter
         lines.AddRange(JoinSiblingChunks(siblings));
         lines.Add(_layout.Indent(indentLevel) + "}");
         return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private bool TryAttachSameLineTrailingComment(
+        List<(Node Node, string Text)> siblings,
+        Node comment,
+        out (Node Node, string Text) updated)
+    {
+        updated = default;
+        if (siblings.Count == 0 || string.IsNullOrEmpty(_source))
+            return false;
+
+        var prev = siblings[^1];
+        if (prev.Node.EndIndex > comment.StartIndex
+            || comment.StartIndex > _source.Length)
+            return false;
+
+        var gap = _source.AsSpan(prev.Node.EndIndex, comment.StartIndex - prev.Node.EndIndex);
+        if (gap.Contains('\n'))
+            return false;
+
+        var commentText = _formatChild(comment, 0).Trim();
+        if (string.IsNullOrEmpty(commentText))
+            return false;
+
+        updated = (prev.Node, prev.Text.TrimEnd() + " " + commentText);
+        return true;
     }
 
     private string FormatBlockCompact(Node node)
@@ -2267,6 +2300,18 @@ public sealed class AstPrinter
                 continue;
             }
 
+            if ((child.Type is "comment" or "line_comment" or "block_comment")
+                && entries.Count > 0)
+            {
+                var asSiblings = entries.Select(e => (e.Node, e.Text)).ToList();
+                if (TryAttachSameLineTrailingComment(asSiblings, child, out var attached))
+                {
+                    var last = entries[^1];
+                    entries[^1] = (attached.Node, last.Type, attached.Text);
+                    continue;
+                }
+            }
+
             var formatted = _formatChild(child, indentLevel);
             if (string.IsNullOrWhiteSpace(formatted))
                 continue;
@@ -2566,16 +2611,60 @@ public sealed class AstPrinter
         if (trimmed.EndsWith(';'))
             return joined;
 
-        // `= "x" // note` must become `= "x"; // note`, not `= "x" // note;`.
-        var commentIdx = trimmed.LastIndexOf("//", StringComparison.Ordinal);
-        if (commentIdx <= 0)
+        // Only inspect the last physical line so `//` inside a multiline array
+        // literal initializer is not mistaken for a trailing declaration comment.
+        var lineStart = trimmed.LastIndexOf('\n') + 1;
+        var lastLine = trimmed[lineStart..];
+        var commentOnLine = IndexOfTrailingLineCommentOutsideStrings(lastLine);
+        if (commentOnLine < 0)
             return trimmed + ";";
 
+        var commentIdx = lineStart + commentOnLine;
         var before = trimmed[..commentIdx].TrimEnd();
         if (before.EndsWith(';'))
             return joined;
 
         return before + "; " + trimmed[commentIdx..];
+    }
+
+    private static int IndexOfTrailingLineCommentOutsideStrings(string text)
+    {
+        var inString = false;
+        var escape = false;
+        var last = -1;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (inString)
+            {
+                if (escape)
+                {
+                    escape = false;
+                    continue;
+                }
+
+                if (ch == '\\')
+                {
+                    escape = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                    inString = false;
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (ch == '/' && i + 1 < text.Length && text[i + 1] == '/')
+                last = i;
+        }
+
+        return last;
     }
 
     private string FormatDeclarationChild(Node child)
