@@ -21,6 +21,7 @@ public class FunctionTests : FormatterTestBase
     [InlineData("Functions/WithParameters/function_with_params")]
     [InlineData("Functions/WithParameters/function_no_space_params")]
     [InlineData("Functions/Parameters/param_block_comment")]
+    [InlineData("Functions/OldTypedReturns/action_tagged_return")]
     public void FunctionDeclarationsWithParameters_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);

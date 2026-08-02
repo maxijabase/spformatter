@@ -346,6 +346,8 @@ public sealed class AstPrinter
                     visibility = child;
                     break;
                 case "type":
+                case "old_type":
+                    // Legacy tagged returns: Action:Foo, not modern `Action Foo`.
                     returnType = child;
                     break;
                 case "identifier":
@@ -360,20 +362,18 @@ public sealed class AstPrinter
             }
         }
 
-        var signature = _layout.Indent(indentLevel);
+        var signatureParts = new List<string>();
         if (visibility != null)
-            signature += _formatChild(visibility, 0) + " ";
+            signatureParts.Add(_formatChild(visibility, 0));
         if (returnType != null)
-            signature += _formatChild(returnType, 0) + " ";
+            signatureParts.Add(_formatChild(returnType, 0));
         if (functionName != null)
-            signature += _formatChild(functionName, 0);
+            signatureParts.Add(_formatChild(functionName, 0));
         if (parameters != null)
-        {
-            var paramsText = _formatChild(parameters, 0);
-            if (_layout.Options.SpaceBeforeOpenParen && paramsText.StartsWith('('))
-                signature += " ";
-            signature += paramsText;
-        }
+            signatureParts.Add(_formatChild(parameters, 0));
+
+        // JoinDeclarationParts keeps Tag:name glued (no space after ':').
+        var signature = _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(signatureParts);
 
         if (body == null)
         {
@@ -2140,22 +2140,7 @@ public sealed class AstPrinter
                 parts.Add(formatted);
         }
 
-        var signature = _layout.Indent(indentLevel);
-        for (var i = 0; i < parts.Count; i++)
-        {
-            var part = parts[i];
-            if (i > 0)
-            {
-                if (part.StartsWith('('))
-                    signature += _layout.Options.SpaceBeforeOpenParen ? " " : "";
-                else
-                    signature += " ";
-            }
-
-            signature += part;
-        }
-
-        return signature + ";";
+        return _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(parts) + ";";
     }
 
     private string FormatParameterDeclarations(Node node)
