@@ -2701,10 +2701,11 @@ public sealed class AstPrinter
 
             if (child.Type == ",")
             {
-                // Keep `,` on the preceding arg so `0, // note` survives a line break.
+                // Attach trailing block comments before `,` so `true/*hasmin*/, 1.0`
+                // does not become `true, /*hasmin*/, 1.0`.
+                FlushCallArgComments(result, pendingComments, trailingSpace: false);
                 if (seenArgument && (result.Length == 0 || result[^1] != ','))
                     result.Append(',');
-                FlushCallArgComments(result, pendingComments, trailingSpace: false);
                 continue;
             }
 

@@ -27,7 +27,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | literals / identifiers / types | Supported | routed through `AstPrinter` |
 | binary / unary / update expressions | Supported | `AstPrinter` + `LayoutRules` (legacy regex helpers may still touch unknown paths); `//` between binary operands breaks before the next operator/operand; parenthesized expressions break before `)` after a trailing `//` |
 | assignment | Supported | `AstPrinter` |
-| call expressions / args | Supported | `call_expression` and `call_arguments` both in `AstPrinter`; comma spacing via `LayoutRules.JoinComma`; comments are not args (no invented `/* x */,`); `//` in arg/param lists breaks before following args and before `)` so the comment cannot eat them |
+| call expressions / args | Supported | `call_expression` and `call_arguments` both in `AstPrinter`; comma spacing via `LayoutRules.JoinComma`; comments are not args (no invented `/* x */,`); trailing block comments stay before `,` (`true /*hasmin*/, 1.0`); `//` in arg/param lists breaks before following args and before `)` so the comment cannot eat them |
 | variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts`; old tags stay `Tag:name` |
 | old_type / old_type_cast | Supported | `AstPrinter`; colon glued (`Handle:x`, `Float:0`); no spaces around `:` |
 | function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed; legacy tagged returns stay glued (`Action:Foo`); array returns keep dims (`char[] Translate`) |
