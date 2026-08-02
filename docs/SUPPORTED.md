@@ -37,7 +37,8 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | char_literal | Supported | `AstPrinter` prints `node.Text` (`'\0'` stays glued; was mis-typed as `character_literal`) |
 | for / while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing; `old_for_loop_variable_declaration_statement` (`new i = 0, s`) via declaration printer (no bogus `;` mid-header); `#else` / `#endif` siblings mid-for are not treated as the body; trailing `//` after `while (...)` stays on the while line and is not chosen as the body |
 | switch / case | Supported | `AstPrinter`; case label spacing; block bodies and bare statement bodies after `:`; fall-through chains |
-| return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored; bare `return` + next-line statement (semicolon-0 parse as valued return) is split back into `return;` + statement |
+| return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored; bare `return` + next-line `assignment_expression` (semicolon-0 misparse) is split into `return;` + assignment; multiline return values (ternary/paren/call) stay valued returns |
+| source newline normalization | Supported | CR-only and CRLF inputs are normalized to LF before parse (Tree-sitter otherwise treats CR-only files as one line) |
 | delete | Supported | `AstPrinter`; space after `delete` even when operand is indexed (`delete h_timer[X]`) |
 | expression statements | Supported | `AstPrinter`; does not drop present semicolons; bare identifier statements skip invented `;` (object-like statement macros like `ATTACKER` / `ACHECK2`) |
 | blocks | Supported | multiline `block` + compact via `PrintCompactBlock`; RequireSemicolons preserved |

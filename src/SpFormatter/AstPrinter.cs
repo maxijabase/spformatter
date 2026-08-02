@@ -556,29 +556,20 @@ public sealed class AstPrinter
 
         var indent = _layout.Indent(indentLevel);
 
-        // Semicolon-0 sources often write a bare `return` then a next statement on
-        // the following line. Tree-sitter folds that into `return <expr>`, which
-        // turns `return` + `x = 0` into a valued return and breaks mixed return
-        // styles under spcomp. Split when the source has a newline between them.
+        // Semicolon-0 sources often write a bare `return` then an assignment on the
+        // next line. Tree-sitter folds that into `return <assign>`, which breaks
+        // mixed return styles under spcomp. Only split for assignments. A newline
+        // before a ternary / paren / call is a legitimate multiline return value.
         if (value != null
+            && value.Type == "assignment_expression"
             && returnKw != null
             && !string.IsNullOrEmpty(_source)
             && returnKw.EndIndex < value.StartIndex
             && value.StartIndex <= _source.Length
             && _source.AsSpan(returnKw.EndIndex, value.StartIndex - returnKw.EndIndex).Contains('\n'))
         {
-            // Keep the continued statement at its source column so a following
-            // assignment under a bare if-return is not stuck at if-body indent
-            // (which would break format idempotency on the second pass).
             var continuedLevel = IndentLevelAt(value.StartIndex);
-            string continued;
-            if (value.Type == "assignment_expression")
-                continued = FormatAssignmentExpression(value, continuedLevel, asStatement: true);
-            else if (NeedsStatementSemicolon(value.Type))
-                continued = _layout.Indent(continuedLevel) + _formatChild(value, 0) + ";";
-            else
-                continued = _formatChild(value, continuedLevel);
-
+            var continued = FormatAssignmentExpression(value, continuedLevel, asStatement: true);
             if (string.IsNullOrWhiteSpace(continued))
                 return indent + "return;";
 

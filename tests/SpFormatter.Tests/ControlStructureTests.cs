@@ -32,6 +32,7 @@ public class ControlStructureTests : FormatterTestBase
     [InlineData("ControlStructures/ReturnStatements/return_with_value")]
     [InlineData("ControlStructures/ReturnStatements/return_expression")]
     [InlineData("ControlStructures/ReturnStatements/return_bare_then_assignment")]
+    [InlineData("ControlStructures/ReturnStatements/return_multiline_ternary")]
     public void ReturnStatements_ShouldFormatExactly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
