@@ -131,4 +131,29 @@ public class MacroSafetyTests
     {
         FormattingOptions.Default.AllowUnsafeMacros.Should().BeFalse();
     }
+
+    [Fact]
+    public void Bare_identifier_statement_macros_do_not_get_invented_semicolons()
+    {
+        const string input = """
+            #define ATTACKER new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+            #define ACHECK2 if(attacker > 0 && GetClientTeam(attacker) == 2)
+
+            public Action:Event_Kill(Handle:event, const String:name[], bool:dontBroadcast)
+            {
+                ATTACKER
+                ACHECK2
+                {
+                    points[attacker] += 1;
+                }
+            }
+            """;
+        using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\n" });
+        var result = f.FormatWithResult(input);
+        result.Success.Should().BeTrue();
+        result.Text.Should().Contain("    ATTACKER\n");
+        result.Text.Should().Contain("    ACHECK2\n");
+        result.Text.Should().NotContain("ATTACKER;");
+        result.Text.Should().NotContain("ACHECK2;");
+    }
 }

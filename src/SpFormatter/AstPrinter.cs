@@ -470,6 +470,8 @@ public sealed class AstPrinter
     {
         var parts = new List<string>();
         var hasSemicolon = false;
+        var nonCommentChildren = 0;
+        var onlyIdentifier = true;
 
         foreach (var child in node.Children)
         {
@@ -479,6 +481,18 @@ public sealed class AstPrinter
                 continue;
             }
 
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0);
+                if (!string.IsNullOrEmpty(comment))
+                    parts.Add(comment);
+                continue;
+            }
+
+            nonCommentChildren++;
+            if (child.Type != "identifier")
+                onlyIdentifier = false;
+
             // Keep expression children at indent 0. Passing statement indent into
             // UnknownNodePrinter leaves (e.g. `this`) invents nested indentation.
             var formatted = _formatChild(child, 0);
@@ -487,7 +501,13 @@ public sealed class AstPrinter
         }
 
         var joined = string.Join(" ", parts);
-        if ((hasSemicolon || _layout.Options.RequireSemicolons) && !joined.EndsWith(";"))
+
+        // Bare identifiers as statements are almost always object-like macros
+        // (`#define ATTACKER new x = ...;` / `#define ACHECK2 if (...)`). Inventing
+        // `;` yields `...;;` or `if (...); {` empty-statement errors under spcomp.
+        var bareMacroIdentifier = onlyIdentifier && nonCommentChildren == 1;
+        if ((hasSemicolon || (_layout.Options.RequireSemicolons && !bareMacroIdentifier))
+            && !joined.EndsWith(";"))
             joined += ";";
 
         return _layout.Indent(indentLevel) + joined;
