@@ -10,6 +10,7 @@ public class LoopFormattingTests : FormatterTestBase
     [InlineData("ControlStructures/ForLoops/for_no_spaces")]
     [InlineData("ControlStructures/ForLoops/for_old_multi_decl")]
     [InlineData("ControlStructures/ForPreproc/for_else_preproc")]
+    [InlineData("ControlStructures/WhileLoops/while_trailing_line_comment")]
     public void For_loop_goldens_match(string testCase)
     {
         AssertTestCaseFormatsCorrectly(testCase);

@@ -820,9 +820,15 @@ public sealed class AstPrinter
 
     private string FormatWhileStatement(Node node, int indentLevel)
     {
+        // Trailing `//` after `)` is a sibling before the body. `body ??= comment`
+        // would drop the real block (same class of bug as mid-if `#else`).
         Node? condition = null;
-        Node? body = null;
         var inParens = false;
+        var pastParens = false;
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var lines = new List<string>();
 
         foreach (var child in node.Children)
         {
@@ -835,6 +841,20 @@ public sealed class AstPrinter
                     continue;
                 case ")":
                     inParens = false;
+                    pastParens = true;
+                    {
+                        var conditionText = condition != null ? _formatChild(condition, 0) : "";
+                        lines.Add(indent + "while" + space + "(" + conditionText + ")");
+                    }
+                    continue;
+                case "comment":
+                case "line_comment":
+                case "block_comment":
+                    if (inParens || !pastParens)
+                        continue;
+                    var commentText = _formatChild(child, 0).Trim();
+                    if (!string.IsNullOrEmpty(commentText) && lines.Count > 0)
+                        lines[0] += " " + commentText;
                     continue;
             }
 
@@ -844,17 +864,24 @@ public sealed class AstPrinter
                 continue;
             }
 
-            body ??= child;
+            if (!pastParens)
+                continue;
+
+            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal))
+            {
+                lines.Add(_formatChild(child, 0).TrimEnd('\r', '\n'));
+                continue;
+            }
+
+            AppendControlBody(lines, child, indentLevel);
         }
 
-        var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
-        var conditionText = condition != null ? _formatChild(condition, 0) : "";
-        var lines = new List<string>
+        if (lines.Count == 0)
         {
-            indent + "while" + space + "(" + conditionText + ")"
-        };
-        AppendControlBody(lines, body, indentLevel);
+            var conditionText = condition != null ? _formatChild(condition, 0) : "";
+            lines.Add(indent + "while" + space + "(" + conditionText + ")");
+        }
+
         return string.Join(_layout.Options.LineEnding, lines);
     }
 
