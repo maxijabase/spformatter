@@ -659,12 +659,18 @@ public sealed class AstPrinter
 
     private string FormatForStatement(Node node, int indentLevel)
     {
+        // Like if/#else: preprocessor siblings after `)` must not be chosen as the body
+        // via `??=` or nested for / shared bodies are dropped.
         Node? initialization = null;
         Node? condition = null;
         Node? increment = null;
-        Node? body = null;
         var inParens = false;
+        var pastParens = false;
         var slot = 0;
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var lines = new List<string>();
 
         foreach (var child in node.Children)
         {
@@ -678,6 +684,20 @@ public sealed class AstPrinter
                     continue;
                 case ")":
                     inParens = false;
+                    pastParens = true;
+                    {
+                        var initText = initialization != null ? _formatChild(initialization, 0).TrimEnd(';') : "";
+                        var condText = condition != null ? _formatChild(condition, 0) : "";
+                        var incrText = increment != null ? _formatChild(increment, 0) : "";
+                        lines.Add(
+                            indent + "for" + space + "("
+                            + initText
+                            + ";"
+                            + (condText.Length > 0 ? " " + condText : "")
+                            + ";"
+                            + (incrText.Length > 0 ? " " + incrText : "")
+                            + ")");
+                    }
                     continue;
                 case ";":
                     if (inParens)
@@ -702,26 +722,24 @@ public sealed class AstPrinter
                 continue;
             }
 
-            body ??= child;
+            if (!pastParens)
+                continue;
+
+            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal))
+            {
+                lines.Add(_formatChild(child, 0).TrimEnd('\r', '\n'));
+                continue;
+            }
+
+            if (child.Type == "for_statement")
+                lines.Add(FormatForStatement(child, indentLevel));
+            else
+                AppendControlBody(lines, child, indentLevel);
         }
 
-        var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
-        var initText = initialization != null ? _formatChild(initialization, 0).TrimEnd(';') : "";
-        var condText = condition != null ? _formatChild(condition, 0) : "";
-        var incrText = increment != null ? _formatChild(increment, 0) : "";
+        if (lines.Count == 0)
+            lines.Add(indent + "for" + space + "(;;)");
 
-        var lines = new List<string>
-        {
-            indent + "for" + space + "("
-                + initText
-                + ";"
-                + (condText.Length > 0 ? " " + condText : "")
-                + ";"
-                + (incrText.Length > 0 ? " " + incrText : "")
-                + ")"
-        };
-        AppendControlBody(lines, body, indentLevel);
         return string.Join(_layout.Options.LineEnding, lines);
     }
 
