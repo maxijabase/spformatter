@@ -42,10 +42,10 @@ public sealed class AstPrinter
                 result = FormatAssignmentExpression(node, indentLevel, asStatement: true);
                 return true;
             case "call_expression":
-                result = FormatCallExpression(node);
+                result = FormatCallExpression(node, indentLevel);
                 return true;
             case "call_arguments":
-                result = FormatCallArguments(node);
+                result = FormatCallArguments(node, indentLevel);
                 return true;
             case "string_literal":
             case "character_literal":
@@ -99,7 +99,7 @@ public sealed class AstPrinter
                 result = FormatFunctionDeclaration(node, indentLevel);
                 return true;
             case "parameter_declarations":
-                result = FormatParameterDeclarations(node);
+                result = FormatParameterDeclarations(node, indentLevel);
                 return true;
             case "parameter_declaration":
                 result = FormatParameterDeclaration(node);
@@ -479,6 +479,8 @@ public sealed class AstPrinter
                 continue;
             }
 
+            // Keep expression children at indent 0. Passing statement indent into
+            // UnknownNodePrinter leaves (e.g. `this`) invents nested indentation.
             var formatted = _formatChild(child, 0);
             if (!string.IsNullOrEmpty(formatted))
                 parts.Add(formatted);
@@ -2291,49 +2293,10 @@ public sealed class AstPrinter
         return _layout.Indent(indentLevel) + _layout.JoinDeclarationParts(parts) + ";";
     }
 
-    private string FormatParameterDeclarations(Node node)
+    private string FormatParameterDeclarations(Node node, int indentLevel)
     {
-        // Same rule as call args: comments are not parameters. JoinComma would turn
-        // `(client, /*const String:command[], */argc)` into `(client, /*...*/, argc)`.
-        var result = new System.Text.StringBuilder("(");
-        var pendingComments = new List<string>();
-        var seenParameter = false;
-        var commaSep = _layout.Options.SpaceAfterComma ? ", " : ",";
-
-        foreach (var child in node.Children)
-        {
-            if (child.Type is "(" or ")")
-                continue;
-
-            if (child.Type is "comment" or "line_comment" or "block_comment")
-            {
-                var comment = _formatChild(child, 0);
-                if (!string.IsNullOrEmpty(comment))
-                    pendingComments.Add(comment);
-                continue;
-            }
-
-            if (child.Type == ",")
-            {
-                FlushCallArgComments(result, pendingComments, trailingSpace: false);
-                continue;
-            }
-
-            var parameter = _formatChild(child, 0);
-            if (string.IsNullOrEmpty(parameter))
-                continue;
-
-            if (seenParameter)
-                result.Append(commaSep);
-            seenParameter = true;
-
-            FlushCallArgComments(result, pendingComments, trailingSpace: true);
-            result.Append(parameter);
-        }
-
-        FlushCallArgComments(result, pendingComments, trailingSpace: false);
-        result.Append(')');
-        return result.ToString();
+        // Same layout rules as call args (block comments stay inline; `//` breaks lines).
+        return FormatCallArguments(node, indentLevel);
     }
 
     private string FormatParameterDeclaration(Node node)
@@ -2541,12 +2504,14 @@ public sealed class AstPrinter
         return body;
     }
 
-    private string FormatCallExpression(Node node)
+    private string FormatCallExpression(Node node, int indentLevel)
     {
         var parts = new List<string>();
         foreach (var child in node.Children)
         {
-            var formatted = _formatChild(child, 0);
+            var formatted = child.Type == "call_arguments"
+                ? FormatCallArguments(child, indentLevel)
+                : _formatChild(child, indentLevel);
             if (!string.IsNullOrEmpty(formatted))
                 parts.Add(formatted);
         }
@@ -2561,14 +2526,17 @@ public sealed class AstPrinter
         return string.Join("", parts);
     }
 
-    private string FormatCallArguments(Node node)
+    private string FormatCallArguments(Node node, int indentLevel)
     {
         // Comments are not arguments. Joining every non-paren child with commas turns
         // `F(a, /* x */ b)` into `F(a, /* x */, b)` and breaks re-parse.
+        // Line comments must end the physical line or they eat following args.
         var result = new System.Text.StringBuilder("(");
         var pendingComments = new List<string>();
         var seenArgument = false;
         var commaSep = _layout.Options.SpaceAfterComma ? ", " : ",";
+        var breakBeforeNextArg = false;
+        var argIndent = _layout.Indent(indentLevel + 1);
 
         foreach (var child in node.Children)
         {
@@ -2577,14 +2545,29 @@ public sealed class AstPrinter
 
             if (child.Type is "comment" or "line_comment" or "block_comment")
             {
-                var comment = _formatChild(child, 0);
-                if (!string.IsNullOrEmpty(comment))
-                    pendingComments.Add(comment);
+                var comment = _formatChild(child, 0).Trim();
+                if (string.IsNullOrEmpty(comment))
+                    continue;
+
+                if (comment.StartsWith("//", StringComparison.Ordinal))
+                {
+                    // End the physical line so following args are not eaten by `//`.
+                    if (result.Length == 0 || result[^1] != ' ')
+                        result.Append(' ');
+                    result.Append(comment);
+                    breakBeforeNextArg = true;
+                    continue;
+                }
+
+                pendingComments.Add(comment);
                 continue;
             }
 
             if (child.Type == ",")
             {
+                // Keep `,` on the preceding arg so `0, // note` survives a line break.
+                if (seenArgument && (result.Length == 0 || result[^1] != ','))
+                    result.Append(',');
                 FlushCallArgComments(result, pendingComments, trailingSpace: false);
                 continue;
             }
@@ -2593,8 +2576,21 @@ public sealed class AstPrinter
             if (string.IsNullOrEmpty(argument))
                 continue;
 
-            if (seenArgument)
-                result.Append(commaSep);
+            if (breakBeforeNextArg)
+            {
+                result.Append(_layout.Options.LineEnding);
+                result.Append(argIndent);
+                breakBeforeNextArg = false;
+            }
+            else if (seenArgument)
+            {
+                // Comma already written when the `,` token was seen.
+                if (result.Length > 0 && result[^1] == ',')
+                    result.Append(_layout.Options.SpaceAfterComma ? " " : "");
+                else
+                    result.Append(commaSep);
+            }
+
             seenArgument = true;
 
             FlushCallArgComments(result, pendingComments, trailingSpace: true);

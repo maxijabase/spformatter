@@ -90,6 +90,7 @@ public class ExpressionTests : FormatterTestBase
     [InlineData("Expressions/FunctionCalls/function_with_params")]
     [InlineData("Expressions/FunctionCalls/nested_function_call")]
     [InlineData("Expressions/FunctionCalls/call_arg_comments")]
+    [InlineData("Expressions/FunctionCalls/call_arg_line_comments")]
     public void FunctionCallExpressions_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
