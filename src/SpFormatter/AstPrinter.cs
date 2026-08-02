@@ -143,6 +143,9 @@ public sealed class AstPrinter
             case "while_statement":
                 result = FormatWhileStatement(node, indentLevel);
                 return true;
+            case "do_while_statement":
+                result = FormatDoWhileStatement(node, indentLevel);
+                return true;
             case "switch_statement":
                 result = FormatSwitchStatement(node, indentLevel);
                 return true;
@@ -894,6 +897,88 @@ public sealed class AstPrinter
         {
             var conditionText = condition != null ? _formatChild(condition, 0) : "";
             lines.Add(indent + "while" + space + "(" + conditionText + ")");
+        }
+
+        return string.Join(_layout.Options.LineEnding, lines);
+    }
+
+    private string FormatDoWhileStatement(Node node, int indentLevel)
+    {
+        // Trailing `//` between `}` and `while` must stay on its own side of a
+        // line break or it eats the `while` keyword.
+        Node? body = null;
+        Node? condition = null;
+        string? trailingComment = null;
+        var inWhileParens = false;
+        var sawWhile = false;
+
+        foreach (var child in node.Children)
+        {
+            switch (child.Type)
+            {
+                case "do":
+                    continue;
+                case "while":
+                    sawWhile = true;
+                    continue;
+                case "(":
+                    if (sawWhile)
+                        inWhileParens = true;
+                    continue;
+                case ")":
+                    inWhileParens = false;
+                    continue;
+                case ";":
+                    continue;
+                case "comment":
+                case "line_comment":
+                case "block_comment":
+                    var commentText = _formatChild(child, 0).Trim();
+                    if (!string.IsNullOrEmpty(commentText))
+                        trailingComment = commentText;
+                    continue;
+            }
+
+            if (inWhileParens)
+            {
+                condition ??= child;
+                continue;
+            }
+
+            if (!sawWhile && child.Type == "block")
+            {
+                body = child;
+                continue;
+            }
+
+            if (!sawWhile && body == null)
+                body = child;
+        }
+
+        var indent = _layout.Indent(indentLevel);
+        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var lines = new List<string> { indent + "do" };
+        AppendControlBody(lines, body, indentLevel);
+
+        var conditionText = condition != null ? _formatChild(condition, 0) : "";
+        var whileLine = indent + "while" + space + "(" + conditionText + ");";
+        if (!string.IsNullOrEmpty(trailingComment))
+        {
+            if (trailingComment.StartsWith("//", StringComparison.Ordinal))
+            {
+                // Keep `}` / comment / while on separate lines when comment is //.
+                if (lines.Count > 0)
+                    lines[^1] = lines[^1] + " " + trailingComment;
+                lines.Add(whileLine);
+            }
+            else
+            {
+                lines.Add(whileLine + " " + trailingComment);
+            }
+        }
+        else
+        {
+            lines.Add(whileLine);
         }
 
         return string.Join(_layout.Options.LineEnding, lines);
@@ -2409,8 +2494,8 @@ public sealed class AstPrinter
         }
 
         var joined = JoinDeclarationPartsBreakingAfterLineComments(parts, indentLevel);
-        if (_layout.Options.RequireSemicolons && !joined.EndsWith(';'))
-            joined += ";";
+        if (_layout.Options.RequireSemicolons)
+            joined = EnsureSemicolonBeforeTrailingLineComment(joined);
 
         return _layout.Indent(indentLevel) + joined;
     }
@@ -2473,6 +2558,24 @@ public sealed class AstPrinter
     {
         var trimmed = text.TrimStart();
         return trimmed.StartsWith("//", StringComparison.Ordinal);
+    }
+
+    private static string EnsureSemicolonBeforeTrailingLineComment(string joined)
+    {
+        var trimmed = joined.TrimEnd();
+        if (trimmed.EndsWith(';'))
+            return joined;
+
+        // `= "x" // note` must become `= "x"; // note`, not `= "x" // note;`.
+        var commentIdx = trimmed.LastIndexOf("//", StringComparison.Ordinal);
+        if (commentIdx <= 0)
+            return trimmed + ";";
+
+        var before = trimmed[..commentIdx].TrimEnd();
+        if (before.EndsWith(';'))
+            return joined;
+
+        return before + "; " + trimmed[commentIdx..];
     }
 
     private string FormatDeclarationChild(Node child)
