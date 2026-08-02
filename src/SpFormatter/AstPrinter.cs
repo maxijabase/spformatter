@@ -31,6 +31,9 @@ public sealed class AstPrinter
             case "binary_expression":
                 result = FormatBinaryExpression(node);
                 return true;
+            case "parenthesized_expression":
+                result = FormatParenthesizedExpression(node, indentLevel);
+                return true;
             case "unary_expression":
             case "update_expression":
                 result = FormatUnaryOrUpdateExpression(node);
@@ -2491,6 +2494,58 @@ public sealed class AstPrinter
             return _layout.FormatAssignmentOperator(formatted.Trim());
 
         return formatted;
+    }
+
+    private string FormatParenthesizedExpression(Node node, int indentLevel)
+    {
+        // Trailing `//` before `)` must break or the comment eats the closing paren.
+        var inner = new System.Text.StringBuilder();
+        var breakBeforeClose = false;
+
+        foreach (var child in node.Children)
+        {
+            if (child.Type is "(" or ")")
+                continue;
+
+            if (child.Type is "comment" or "line_comment" or "block_comment")
+            {
+                var comment = _formatChild(child, 0).Trim();
+                if (string.IsNullOrEmpty(comment))
+                    continue;
+
+                if (inner.Length > 0 && inner[^1] != ' ' && inner[^1] != '\n')
+                    inner.Append(' ');
+                inner.Append(comment);
+
+                if (comment.StartsWith("//", StringComparison.Ordinal))
+                    breakBeforeClose = true;
+                continue;
+            }
+
+            var formatted = _formatChild(child, indentLevel);
+            if (string.IsNullOrEmpty(formatted))
+                continue;
+
+            if (breakBeforeClose)
+            {
+                inner.Append(_layout.Options.LineEnding);
+                inner.Append(_layout.Indent(indentLevel + 1));
+                inner.Append(formatted.TrimStart());
+                breakBeforeClose = false;
+            }
+            else
+            {
+                inner.Append(formatted);
+            }
+        }
+
+        if (breakBeforeClose)
+        {
+            return "(" + inner + _layout.Options.LineEnding
+                + _layout.Indent(indentLevel) + ")";
+        }
+
+        return "(" + inner + ")";
     }
 
     private string FormatBinaryExpression(Node node)

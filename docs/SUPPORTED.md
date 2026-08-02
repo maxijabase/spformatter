@@ -25,7 +25,7 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | Construct | Status | Notes |
 |---|---|---|
 | literals / identifiers / types | Supported | routed through `AstPrinter` |
-| binary / unary / update expressions | Supported | `AstPrinter` + `LayoutRules` (legacy regex helpers may still touch unknown paths); `//` between binary operands breaks before the next operator/operand |
+| binary / unary / update expressions | Supported | `AstPrinter` + `LayoutRules` (legacy regex helpers may still touch unknown paths); `//` between binary operands breaks before the next operator/operand; parenthesized expressions break before `)` after a trailing `//` |
 | assignment | Supported | `AstPrinter` |
 | call expressions / args | Supported | `call_expression` and `call_arguments` both in `AstPrinter`; comma spacing via `LayoutRules.JoinComma`; comments are not args (no invented `/* x */,`); `//` in arg/param lists breaks before following args and before `)` so the comment cannot eat them |
 | variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts`; old tags stay `Tag:name` |
