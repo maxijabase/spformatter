@@ -1,0 +1,13 @@
+**/.git
+**/bin
+**/obj
+**/.vs
+**/TestResults
+**/corpus
+**/docs
+**/tools
+**/tests
+**/src/SpFormatter.Cli
+**/src/SpFormatter.UI
+**/*.md
+!src/SpFormatter.Playground/README.md

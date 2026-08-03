@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SpFormatter Playground</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      SpFormatter
+      <span id="version" class="version"></span>
+    </div>
+    <div class="actions">
+      <label class="live">
+        <input type="checkbox" id="liveToggle" />
+        Live
+      </label>
+      <button type="button" id="resetOptions" class="secondary">Reset options</button>
+      <button type="button" id="formatBtn">Format</button>
+      <span id="status" class="status">Ready</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="options" id="optionsPanel">
+      <h2>Options</h2>
+
+      <section>
+        <h3>Indent</h3>
+        <label>Indent size <input type="number" id="indentSize" min="0" max="16" value="4" /></label>
+        <label class="check"><input type="checkbox" id="useSpaces" checked /> Use spaces</label>
+      </section>
+
+      <section>
+        <h3>Spacing</h3>
+        <label class="check"><input type="checkbox" id="spaceAfterComma" checked /> Space after comma</label>
+        <label class="check"><input type="checkbox" id="spaceAroundOperators" checked /> Space around operators</label>
+        <label class="check"><input type="checkbox" id="spaceBeforeOpenParen" /> Space before open paren</label>
+        <label class="check"><input type="checkbox" id="spaceInArrayBrackets" /> Space in array brackets</label>
+      </section>
+
+      <section>
+        <h3>Newlines</h3>
+        <label class="check"><input type="checkbox" id="newLineAfterOpenBrace" checked /> Newline after open brace</label>
+        <label class="check"><input type="checkbox" id="newLineAfterInclude" checked /> Newline after include run</label>
+        <label class="check"><input type="checkbox" id="preserveEmptyLines" checked /> Preserve empty lines</label>
+        <label>Max consecutive empty lines <input type="number" id="maxConsecutiveEmptyLines" min="0" max="20" value="2" /></label>
+      </section>
+
+      <section>
+        <h3>Includes</h3>
+        <label class="check"><input type="checkbox" id="sortIncludes" /> Sort includes</label>
+      </section>
+
+      <section>
+        <h3>Safety</h3>
+        <label class="check"><input type="checkbox" id="requireSemicolons" checked /> Require semicolons</label>
+        <label class="check"><input type="checkbox" id="allowSyntaxRecovery" /> Allow syntax recovery</label>
+        <label class="check"><input type="checkbox" id="allowUnsafeMacros" /> Allow unsafe macros</label>
+      </section>
+    </aside>
+
+    <section class="editors">
+      <div class="pane">
+        <div class="pane-title">Input</div>
+        <div id="inputEditor" class="editor"></div>
+      </div>
+      <div class="pane">
+        <div class="pane-title">Formatted</div>
+        <div id="outputEditor" class="editor"></div>
+      </div>
+    </section>
+  </main>
+
+  <ul id="errors" class="errors" hidden></ul>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

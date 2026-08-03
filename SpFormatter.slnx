@@ -6,6 +6,7 @@
   </Configurations>
   <Folder Name="/src/">
     <Project Path="src/SpFormatter.Cli/SpFormatter.Cli.csproj" />
+    <Project Path="src/SpFormatter.Playground/SpFormatter.Playground.csproj" />
     <Project Path="src/SpFormatter.UI/SpFormatter.UI.csproj" />
     <Project Path="src/SpFormatter/SpFormatter.csproj" />
   </Folder>

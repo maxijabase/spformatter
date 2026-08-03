@@ -11,7 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="tree-sitter-sourcepawn.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="tree-sitter-sourcepawn.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('tree-sitter-sourcepawn.dll')" />
+    <None Include="tree-sitter-sourcepawn.so" CopyToOutputDirectory="PreserveNewest" Condition="Exists('tree-sitter-sourcepawn.so')" />
+    <None Include="tree-sitter-sourcepawn.dylib" CopyToOutputDirectory="PreserveNewest" Condition="Exists('tree-sitter-sourcepawn.dylib')" />
   </ItemGroup>
 
 </Project>

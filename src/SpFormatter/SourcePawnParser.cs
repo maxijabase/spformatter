@@ -4,21 +4,33 @@ namespace SpFormatter;
 
 public class SourcePawnParser : IDisposable
 {
+    public const string NativeSymbolName = "tree_sitter_sourcepawn";
+
     private readonly Language _language;
     private readonly Parser _parser;
     private bool _disposed;
+
+    /// <summary>
+    /// File name TreeSitter.DotNet should load for the current OS.
+    /// </summary>
+    public static string NativeLibraryFileName =>
+        OperatingSystem.IsWindows()
+            ? "tree-sitter-sourcepawn.dll"
+            : OperatingSystem.IsMacOS()
+                ? "tree-sitter-sourcepawn.dylib"
+                : "tree-sitter-sourcepawn.so";
 
     public SourcePawnParser()
     {
         try
         {
-            _language = new Language("tree-sitter-sourcepawn", "tree_sitter_sourcepawn");
+            _language = new Language(NativeLibraryFileName, NativeSymbolName);
             _parser = new Parser(_language);
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                "Failed to initialize SourcePawn parser. Ensure tree-sitter-sourcepawn.dll is available.", ex);
+                $"Failed to initialize SourcePawn parser. Ensure {NativeLibraryFileName} is available.", ex);
         }
     }
 

@@ -33,6 +33,7 @@ SpFormatter formats **SourcePawn**, not the preprocessor language. Files with fu
 - `src/SpFormatter` – core library
 - `src/SpFormatter.Cli` – command-line tool
 - `src/SpFormatter.UI` – WPF playground
+- `src/SpFormatter.Playground` – web playground (Monaco + API; Railway-ready)
 - `tests/SpFormatter.Tests` – tests and golden fixtures
 - `corpus/macro_abuse/` – intentional preprocessor stress cases
 
