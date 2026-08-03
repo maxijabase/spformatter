@@ -6,6 +6,7 @@ public class FunctagTests : FormatterTestBase
 {
     [Theory]
     [InlineData("Functags/Basic/simple_functag")]
+    [InlineData("Functags/Basic/functag_public_name")]
     public void Functags_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
