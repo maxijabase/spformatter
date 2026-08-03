@@ -6,6 +6,7 @@ public class MethodmapTests : FormatterTestBase
 {
     [Theory]
     [InlineData("Methodmaps/Basic/simple_methodmap")]
+    [InlineData("Methodmaps/Basic/property_setter_alias")]
     public void Methodmaps_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
