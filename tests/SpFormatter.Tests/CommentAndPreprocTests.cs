@@ -5,6 +5,13 @@ namespace SpFormatter.Tests;
 
 public class CommentAndPreprocTests : FormatterTestBase
 {
+    [Theory]
+    [InlineData("Preprocessor/Includes/include_bare_and_backslash")]
+    public void Include_path_shapes_from_fork_grammar(string testCaseName)
+    {
+        AssertTestCaseFormatsCorrectly(testCaseName);
+    }
+
     [Fact]
     public void Line_comment_preserves_text_and_indent()
     {

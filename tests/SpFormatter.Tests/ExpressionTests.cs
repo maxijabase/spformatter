@@ -93,6 +93,7 @@ public class ExpressionTests : FormatterTestBase
     [InlineData("Expressions/FunctionCalls/call_arg_line_comments")]
     [InlineData("Expressions/FunctionCalls/call_arg_trailing_line_comment")]
     [InlineData("Expressions/FunctionCalls/call_arg_block_comment_before_comma")]
+    [InlineData("Expressions/StringLiterals/percent_escape")]
     public void FunctionCallExpressions_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
