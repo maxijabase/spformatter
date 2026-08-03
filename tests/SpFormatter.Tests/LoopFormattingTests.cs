@@ -11,7 +11,9 @@ public class LoopFormattingTests : FormatterTestBase
     [InlineData("ControlStructures/ForLoops/for_old_multi_decl")]
     [InlineData("ControlStructures/ForPreproc/for_else_preproc")]
     [InlineData("ControlStructures/WhileLoops/while_trailing_line_comment")]
+    [InlineData("ControlStructures/WhileLoops/while_legacy_do")]
     [InlineData("ControlStructures/DoWhile/do_while_trailing_comment")]
+    [InlineData("ControlStructures/DoWhile/do_while_bare_condition")]
     public void For_loop_goldens_match(string testCase)
     {
         AssertTestCaseFormatsCorrectly(testCase);

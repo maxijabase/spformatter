@@ -376,6 +376,11 @@ public sealed class AstPrinter
                 case "block":
                     body = child;
                     break;
+                default:
+                    // Old-style bare body: `Tag:Name(args) Stmt;`
+                    if (parameters != null && body == null)
+                        body = child;
+                    break;
             }
         }
 
@@ -397,6 +402,12 @@ public sealed class AstPrinter
         if (body == null)
         {
             result = signature;
+            return true;
+        }
+
+        if (body.Type != "block")
+        {
+            result = signature + _layout.Options.LineEnding + _formatChild(body, indentLevel + 1);
             return true;
         }
 
@@ -873,13 +884,18 @@ public sealed class AstPrinter
     {
         // Trailing `//` after `)` is a sibling before the body. `body ??= comment`
         // would drop the real block (same class of bug as mid-if `#else`).
+        // Legacy: `while !expr do stmt` has no parentheses.
         Node? condition = null;
+        Node? body = null;
         var inParens = false;
-        var pastParens = false;
+        var hasParenForm = false;
+        var pastCondition = false;
+        var sawDo = false;
+        string? trailingComment = null;
+        var preprocLines = new List<string>();
 
         var indent = _layout.Indent(indentLevel);
         var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
-        var lines = new List<string>();
 
         foreach (var child in node.Children)
         {
@@ -887,25 +903,25 @@ public sealed class AstPrinter
             {
                 case "while":
                     continue;
+                case "do":
+                    sawDo = true;
+                    continue;
                 case "(":
                     inParens = true;
+                    hasParenForm = true;
                     continue;
                 case ")":
                     inParens = false;
-                    pastParens = true;
-                    {
-                        var conditionText = condition != null ? _formatChild(condition, 0) : "";
-                        lines.Add(indent + "while" + space + "(" + conditionText + ")");
-                    }
+                    pastCondition = true;
                     continue;
                 case "comment":
                 case "line_comment":
                 case "block_comment":
-                    if (inParens || !pastParens)
+                    if (inParens || !pastCondition)
                         continue;
                     var commentText = _formatChild(child, 0).Trim();
-                    if (!string.IsNullOrEmpty(commentText) && lines.Count > 0)
-                        lines[0] += " " + commentText;
+                    if (!string.IsNullOrEmpty(commentText))
+                        trailingComment = commentText;
                     continue;
             }
 
@@ -915,24 +931,34 @@ public sealed class AstPrinter
                 continue;
             }
 
-            if (!pastParens)
-                continue;
-
-            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal))
+            if (!pastCondition && condition == null)
             {
-                lines.Add(_formatChild(child, 0).TrimEnd('\r', '\n'));
+                condition = child;
+                pastCondition = true;
                 continue;
             }
 
-            AppendControlBody(lines, child, indentLevel);
+            if (child.Type.StartsWith("preproc_", StringComparison.Ordinal))
+            {
+                preprocLines.Add(_formatChild(child, 0).TrimEnd('\r', '\n'));
+                continue;
+            }
+
+            body ??= child;
         }
 
-        if (lines.Count == 0)
-        {
-            var conditionText = condition != null ? _formatChild(condition, 0) : "";
-            lines.Add(indent + "while" + space + "(" + conditionText + ")");
-        }
+        var conditionText = condition != null ? _formatChild(condition, 0) : "";
+        var header = hasParenForm
+            ? indent + "while" + space + "(" + conditionText + ")"
+            : indent + "while " + conditionText;
+        if (sawDo)
+            header += " do";
+        if (!string.IsNullOrEmpty(trailingComment))
+            header += " " + trailingComment;
 
+        var lines = new List<string> { header };
+        lines.AddRange(preprocLines);
+        AppendControlBody(lines, body, indentLevel);
         return string.Join(_layout.Options.LineEnding, lines);
     }
 
@@ -940,10 +966,12 @@ public sealed class AstPrinter
     {
         // Trailing `//` between `}` and `while` must stay on its own side of a
         // line break or it eats the `while` keyword.
+        // Bare conditions (`do stmt while !expr;`) are valid in spcomp.
         Node? body = null;
         Node? condition = null;
         string? trailingComment = null;
         var inWhileParens = false;
+        var hasParenForm = false;
         var sawWhile = false;
 
         foreach (var child in node.Children)
@@ -957,7 +985,10 @@ public sealed class AstPrinter
                     continue;
                 case "(":
                     if (sawWhile)
+                    {
                         inWhileParens = true;
+                        hasParenForm = true;
+                    }
                     continue;
                 case ")":
                     inWhileParens = false;
@@ -979,14 +1010,19 @@ public sealed class AstPrinter
                 continue;
             }
 
-            if (!sawWhile && child.Type == "block")
+            if (sawWhile)
+            {
+                condition ??= child;
+                continue;
+            }
+
+            if (child.Type == "block")
             {
                 body = child;
                 continue;
             }
 
-            if (!sawWhile && body == null)
-                body = child;
+            body ??= child;
         }
 
         var indent = _layout.Indent(indentLevel);
@@ -995,7 +1031,9 @@ public sealed class AstPrinter
         AppendControlBody(lines, body, indentLevel);
 
         var conditionText = condition != null ? _formatChild(condition, 0) : "";
-        var whileLine = indent + "while" + space + "(" + conditionText + ");";
+        var whileLine = hasParenForm
+            ? indent + "while" + space + "(" + conditionText + ");"
+            : indent + "while " + conditionText + ";";
         if (!string.IsNullOrEmpty(trailingComment))
         {
             if (trailingComment.StartsWith("//", StringComparison.Ordinal))
@@ -1858,6 +1896,7 @@ public sealed class AstPrinter
     {
         var name = "";
         string? expression = null;
+        var typeParts = new List<string>();
 
         foreach (var child in node.Children)
         {
@@ -1873,10 +1912,19 @@ public sealed class AstPrinter
                 case "typedef_expression":
                     expression = FormatTypedefExpression(child, 0);
                     break;
+                case "type":
+                case "dimension":
+                case "fixed_dimension":
+                    // Type alias: `typedef Address = int64;`
+                    var part = _formatChild(child, 0);
+                    if (!string.IsNullOrEmpty(part))
+                        typeParts.Add(part);
+                    break;
             }
         }
 
-        return _layout.Indent(indentLevel) + "typedef " + name + " = " + (expression ?? "") + ";";
+        expression ??= _layout.JoinDeclarationParts(typeParts);
+        return _layout.Indent(indentLevel) + "typedef " + name + " = " + expression + ";";
     }
 
     private string FormatTypedefExpression(Node node, int indentLevel)
@@ -2055,7 +2103,16 @@ public sealed class AstPrinter
             {
                 case "struct":
                 case ";":
+                    break;
                 case ",":
+                    // Legacy comma-separated fields: `const String:name[],`
+                    if (members.Count > 0)
+                    {
+                        var last = members[^1];
+                        var trimmed = last.Text.TrimEnd();
+                        if (!trimmed.EndsWith(','))
+                            members[^1] = (last.Node, trimmed + ",");
+                    }
                     break;
                 case "identifier":
                     if (!inBody)

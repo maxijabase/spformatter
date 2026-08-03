@@ -1,0 +1,1 @@
+typedef Yam = int64;

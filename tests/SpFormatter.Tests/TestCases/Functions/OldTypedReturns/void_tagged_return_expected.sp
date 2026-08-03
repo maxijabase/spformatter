@@ -1,0 +1,3 @@
+stock void:Dissolve(edict)
+{
+}

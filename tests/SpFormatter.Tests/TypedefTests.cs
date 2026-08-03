@@ -6,6 +6,7 @@ public class TypedefTests : FormatterTestBase
 {
     [Theory]
     [InlineData("Typedefs/Basic/simple_typedef")]
+    [InlineData("Typedefs/Basic/typedef_alias_int64")]
     public void Typedefs_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);

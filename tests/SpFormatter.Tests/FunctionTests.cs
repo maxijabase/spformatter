@@ -22,6 +22,9 @@ public class FunctionTests : FormatterTestBase
     [InlineData("Functions/WithParameters/function_no_space_params")]
     [InlineData("Functions/Parameters/param_block_comment")]
     [InlineData("Functions/OldTypedReturns/action_tagged_return")]
+    [InlineData("Functions/OldTypedReturns/void_tagged_return")]
+    [InlineData("Functions/OldTypedReturns/tagged_single_statement_body")]
+    [InlineData("Functions/OldMultiTag/multi_tag_param")]
     [InlineData("Functions/ArrayReturns/char_array_return")]
     public void FunctionDeclarationsWithParameters_ShouldFormatCorrectly(string testCaseName)
     {

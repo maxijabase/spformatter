@@ -10,6 +10,7 @@ public class StructTests : FormatterTestBase
     [InlineData("Structs/Basic/struct_preproc_fields")]
     [InlineData("Structs/Basic/struct_trailing_comment")]
     [InlineData("Structs/Basic/struct_mid_comment")]
+    [InlineData("Structs/Basic/struct_comma_fields")]
     public void Structs_ShouldFormatCorrectly(string testCaseName)
     {
         AssertTestCaseFormatsCorrectly(testCaseName);
