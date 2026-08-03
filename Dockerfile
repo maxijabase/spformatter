@@ -19,7 +19,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS grammar
 ARG GRAMMAR_REPO
 ARG GRAMMAR_REF
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc git \
+    && apt-get install -y --no-install-recommends gcc libc6-dev git \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /grammar
 RUN git clone --depth 1 --branch "${GRAMMAR_REF}" "${GRAMMAR_REPO}" .
