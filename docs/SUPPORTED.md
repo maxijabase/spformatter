@@ -24,25 +24,25 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 
 | Construct | Status | Notes |
 |---|---|---|
-| literals / identifiers / types | Supported | routed through `AstPrinter` |
+| literals / identifiers / types | Supported | routed through `AstPrinter`; `int64` builtin and `\%` string escapes via fork grammar DLL |
 | binary / unary / update expressions | Supported | `AstPrinter` + `LayoutRules` (legacy regex helpers may still touch unknown paths); `//` between binary operands breaks before the next operator/operand; parenthesized expressions break before `)` after a trailing `//` |
 | assignment | Supported | `AstPrinter` |
 | call expressions / args | Supported | `call_expression` and `call_arguments` both in `AstPrinter`; comma spacing via `LayoutRules.JoinComma`; comments are not args (no invented `/* x */,`); trailing block comments stay before `,` (`true /*hasmin*/, 1.0`); `//` in arg/param lists breaks before following args and before `)` so the comment cannot eat them |
 | variable declarations (local / global / old-style) | Supported | `AstPrinter` + `LayoutRules.JoinDeclarationParts`; old tags stay `Tag:name`; trailing `//` gets `;` before the comment so `//` cannot eat the semicolon; mid-decl `#if`/`#endif`/`#define` stay on their own column-0 lines; grammar-split `Handle` + `#if` + name-list rejoined without inventing `Handle;` |
 | old_type / old_type_cast | Supported | `AstPrinter`; colon glued (`Handle:x`, `Float:0`); no spaces around `:` |
-| function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed; legacy tagged returns stay glued (`Action:Foo`); array returns keep dims (`char[] Translate`) |
+| function definitions / declarations | Supported | clean defs/decls in `AstPrinter`; misparse fallbacks removed; legacy tagged returns stay glued (`Action:Foo`, `void:Foo`); bare single-statement bodies after tagged signatures; multi-tag params (`{Float,bool}:x`); array returns keep dims (`char[] Translate`) |
 | parameter list comments | Supported | same as call args: comments are not parameters (no invented `,` around `/* ... */`) |
 | native declarations | Supported | `AstPrinter` (same signature join as function declarations) |
 | if / else | Supported | `AstPrinter`; preserves bare single-statement bodies; trailing comments after `)` stay on the if line; `#else` / `#endif` siblings mid-if are not treated as the body; no brace injection |
 | char_literal | Supported | `AstPrinter` prints `node.Text` (`'\0'` stays glued; was mis-typed as `character_literal`) |
-| for / while / do-while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing; `old_for_loop_variable_declaration_statement` (`new i = 0, s`) via declaration printer (no bogus `;` mid-header); `#else` / `#endif` siblings mid-for are not treated as the body; trailing `//` after `while (...)` stays on the while line and is not chosen as the body; `do { } //note while (...)` keeps `while` off the comment line |
+| for / while / do-while | Supported | `AstPrinter`; preserves bare bodies; for-header slot spacing; `old_for_loop_variable_declaration_statement` (`new i = 0, s`) via declaration printer (no bogus `;` mid-header); `#else` / `#endif` siblings mid-for are not treated as the body; trailing `//` after `while (...)` stays on the while line and is not chosen as the body; `do { } //note while (...)` keeps `while` off the comment line; legacy `while !expr do stmt` and bare `do … while !expr` (fork grammar) |
 | switch / case | Supported | `AstPrinter`; case label spacing; block bodies and bare statement bodies after `:`; fall-through chains; `#if`/`#endif`/`#else` siblings between cases stay at column 0; multi-value `case` with `//` after commas breaks lines so comments cannot eat later values |
 | return / break / continue | Supported | `AstPrinter`; RequireSemicolons honored; bare `return` + next-line `assignment_expression` (semicolon-0 misparse) is split into `return;` + assignment; multiline return values (ternary/paren/call) stay valued returns |
 | source newline normalization | Supported | CR-only and CRLF inputs are normalized to LF before parse (Tree-sitter otherwise treats CR-only files as one line); output uses `FormattingOptions.LineEnding` (default `Environment.NewLine`). Some spcomp `\`-continued `#define`/strings only accept CRLF, so forcing LF can break compile-preserve even when the AST print is correct |
 | delete | Supported | `AstPrinter`; space after `delete` even when operand is indexed (`delete h_timer[X]`) |
 | expression statements | Supported | `AstPrinter`; does not drop present semicolons; bare identifier statements skip invented `;` (object-like statement macros like `ATTACKER` / `ACHECK2`) |
 | blocks | Supported | multiline `block` + compact via `PrintCompactBlock`; RequireSemicolons preserved |
-| includes / preprocessor directives | Supported | `AstPrinter` prints directive `node.Text` (trim trailing CR/LF only); SortIncludes remains opt-in at source_file; `#define` values with `http://` rejoined when the lexer splits them into define + `//` comment |
+| includes / preprocessor directives | Supported | `AstPrinter` prints directive `node.Text` (trim trailing CR/LF only); SortIncludes remains opt-in at source_file; `#define` values with `http://` rejoined when the lexer splits them into define + `//` comment; bare `#include name` and quoted paths with `\` (fork grammar) |
 | function-like macros (`#define Name(`) | Partial | **refused by default** (`AllowUnsafeMacros` / `--unsafe-macros` to override). AST rewrite cannot see expansions; formatting can break compiling plugins (see `corpus/macro_abuse/`). Object-like `#define NAME value` is fine. |
 | comments | Supported | `AstPrinter`; indent only, text preserved |
 | ternary | Supported | `AstPrinter` honors `SpaceAroundOperators`; mid-ternary comments stay attached and do not replace the condition/arms |
@@ -55,13 +55,13 @@ See [BASELINE.md](BASELINE.md) for history. Treat green as a contract for Suppor
 | alignment options | Out of scope | options exist but unused |
 | optional semicolon removal | Out of scope | option unused; tests misleading |
 | blank lines between siblings | Supported | restored from original source gaps between AST siblings; capped by `MaxConsecutiveEmptyLines` (default 2); off when `PreserveEmptyLines` is false |
-| methodmap | Supported | `AstPrinter`; inheritance spacing, natives/aliases/methods/properties; trailing `;` on methodmap only |
+| methodmap | Supported | `AstPrinter`; inheritance spacing, natives/aliases/methods/properties; property setter aliases (`public set() = Native;`); trailing `;` on methodmap only |
 | enum_struct | Supported | `AstPrinter`; fields + methods; brace layout matches STYLE |
-| typedef / typedef_expression | Supported | `AstPrinter`; strips optional outer parens; reuses parameter printers |
+| typedef / typedef_expression | Supported | `AstPrinter`; function typedefs and type aliases (`typedef Yam = int64;`); strips optional outer parens; reuses parameter printers |
 | typeset | Supported | `AstPrinter`; member `typedef_expression`s; brace layout matches STYLE |
-| functag | Supported | `AstPrinter`; `old_type` prints as `Tag:` without spaces around `:` |
+| functag | Supported | `AstPrinter`; `old_type` prints as `Tag:` without spaces around `:`; `functag public Name(...)` without return tag |
 | funcenum | Supported | `AstPrinter`; members keep trailing commas; brace layout matches STYLE |
-| struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; trailing `;`; field comments stay on the prior field; preprocessor lines keep column 0 and get no invented trailing `,`; trailing `} //note` stays after the constructor; comments between `=` and `{` stay on their own line |
+| struct / struct_declaration | Supported | `AstPrinter`; modern fields + Plugin myinfo constructor; legacy comma-separated `old_struct_field`s; trailing `;`; field comments stay on the prior field; preprocessor lines keep column 0 and get no invented trailing `,`; trailing `} //note` stays after the constructor; comments between `=` and `{` stay on their own line |
 | enum | Supported | `AstPrinter`; named/anon, optional increment `(<<= n)`, trailing commas + `;` |
 | alias_declaration / alias_assignment | Supported | `AstPrinter`; `operator++` / `operator*` stay glued; legacy overloads kept on purpose |
 
