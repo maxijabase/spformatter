@@ -158,7 +158,24 @@ function applyOptions(options) {
 }
 
 function setStatus(text) {
-  $("status").textContent = text;
+  const el = $("status");
+  el.textContent = text;
+  el.classList.remove("is-ok", "is-error");
+  if (String(text).startsWith("OK")) el.classList.add("is-ok");
+  else if (/error|fail/i.test(String(text))) el.classList.add("is-error");
+}
+
+function getMode() {
+  const pressed = document.querySelector(".mode-seg__btn[aria-pressed='true']");
+  return pressed?.dataset.mode === "modernize" ? "modernize" : "format";
+}
+
+function setMode(mode, options = {}) {
+  const next = mode === "modernize" ? "modernize" : "format";
+  for (const btn of document.querySelectorAll(".mode-seg__btn")) {
+    btn.setAttribute("aria-pressed", btn.dataset.mode === next ? "true" : "false");
+  }
+  syncModeUi(options);
 }
 
 function showErrors(errors) {
@@ -201,7 +218,7 @@ async function formatNow() {
   formatting = true;
   $("formatBtn").disabled = true;
 
-  const mode = $("modeSelect").value;
+  const mode = getMode();
   const isModernize = mode === "modernize";
   setStatus(isModernize ? "Modernizing…" : "Formatting…");
 
@@ -269,10 +286,13 @@ function isStockSample(text) {
 }
 
 function syncModeUi(options = {}) {
-  const modernize = $("modeSelect").value === "modernize";
+  const modernize = getMode() === "modernize";
   $("formatAfterWrap").hidden = !modernize;
-  const titles = document.querySelectorAll(".pane-title");
-  if (titles[1]) titles[1].textContent = modernize ? "Modernized" : "Formatted";
+
+  const inputTitle = $("inputPaneTitle");
+  const outputTitle = $("outputPaneTitle");
+  if (inputTitle) inputTitle.textContent = modernize ? "Input · Modernize" : "Input · Format";
+  if (outputTitle) outputTitle.textContent = modernize ? "Modernized" : "Formatted";
 
   if (options.loadSample && inputEditor && isStockSample(inputEditor.getValue())) {
     inputEditor.setValue(sampleForMode(modernize ? "modernize" : "format"));
@@ -328,19 +348,20 @@ require(["vs/editor/editor.main"], () => {
   });
 
   applyOptions(DEFAULT_OPTIONS);
-  $("modeSelect").value = initialMode;
-  syncModeUi();
+  setMode(initialMode);
 
   $("formatBtn").addEventListener("click", formatNow);
-  $("modeSelect").addEventListener("change", () => {
-    syncModeUi({ loadSample: true });
+  $("modeSeg").addEventListener("click", (event) => {
+    const btn = event.target.closest(".mode-seg__btn");
+    if (!btn || btn.getAttribute("aria-pressed") === "true") return;
+    setMode(btn.dataset.mode, { loadSample: true });
     formatNow();
   });
   $("formatAfter").addEventListener("change", scheduleLiveFormat);
   $("resetOptions").addEventListener("click", () => {
     applyOptions(DEFAULT_OPTIONS);
     if (inputEditor) {
-      inputEditor.setValue(sampleForMode($("modeSelect").value));
+      inputEditor.setValue(sampleForMode(getMode()));
     }
     formatNow();
   });

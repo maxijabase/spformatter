@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SpFormatter Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -13,22 +16,19 @@
       <span id="version" class="version"></span>
     </div>
     <div class="actions">
-      <label class="mode">
-        Mode
-        <select id="modeSelect">
-          <option value="format" selected>Format</option>
-          <option value="modernize">Modernize</option>
-        </select>
-      </label>
+      <div class="mode-seg" id="modeSeg" role="group" aria-label="Mode">
+        <button type="button" class="mode-seg__btn" data-mode="format" aria-pressed="true">Format</button>
+        <button type="button" class="mode-seg__btn" data-mode="modernize" aria-pressed="false">Modernize</button>
+      </div>
       <label class="check" id="formatAfterWrap" hidden>
         <input type="checkbox" id="formatAfter" checked /> Format after
       </label>
-      <label class="live">
+      <label class="check">
         <input type="checkbox" id="liveToggle" />
         Live
       </label>
       <button type="button" id="resetOptions" class="secondary">Reset options</button>
-      <button type="button" id="formatBtn">Run</button>
+      <button type="button" id="formatBtn" class="primary">Run</button>
       <span id="status" class="status">Ready</span>
     </div>
   </header>
@@ -74,11 +74,11 @@
 
     <section class="editors">
       <div class="pane">
-        <div class="pane-title">Input</div>
+        <div class="pane-title" id="inputPaneTitle">Input · Format</div>
         <div id="inputEditor" class="editor"></div>
       </div>
       <div class="pane">
-        <div class="pane-title">Formatted</div>
+        <div class="pane-title" id="outputPaneTitle">Formatted</div>
         <div id="outputEditor" class="editor"></div>
       </div>
     </section>
