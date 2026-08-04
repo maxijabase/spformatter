@@ -59,14 +59,54 @@ public class Program
                 case "--use-tabs":
                     options.UseSpaces = false;
                     break;
-                case "--space-before-paren":
-                    options.SpaceBeforeOpenParen = true;
+                case "--no-space-after-comma":
+                    options.SpaceAfterComma = false;
                     break;
                 case "--no-space-around-operators":
                     options.SpaceAroundOperators = false;
                     break;
+                case "--space-before-paren":
+                    options.SpaceBeforeOpenParen = true;
+                    break;
+                case "--space-in-array-brackets":
+                    options.SpaceInArrayBrackets = true;
+                    break;
+                case "--no-newline-after-open-brace":
+                    options.NewLineAfterOpenBrace = false;
+                    break;
+                case "--no-newline-after-include":
+                    options.NewLineAfterInclude = false;
+                    break;
+                case "--no-preserve-empty-lines":
+                    options.PreserveEmptyLines = false;
+                    break;
+                case "--max-consecutive-empty-lines":
+                    if (i + 1 >= args.Length
+                        || !int.TryParse(args[++i], out var maxEmpty)
+                        || maxEmpty < 0)
+                    {
+                        Console.Error.WriteLine("error: --max-consecutive-empty-lines requires a non-negative integer");
+                        return 1;
+                    }
+                    options.MaxConsecutiveEmptyLines = maxEmpty;
+                    break;
+                case "--sort-includes":
+                    options.SortIncludes = true;
+                    break;
+                case "--no-require-semicolons":
+                    options.RequireSemicolons = false;
+                    break;
+                case "--allow-syntax-recovery":
+                    options.AllowSyntaxRecovery = true;
+                    break;
                 case "--unsafe-macros":
                     options.AllowUnsafeMacros = true;
+                    break;
+                case "--lf":
+                    options.LineEnding = "\n";
+                    break;
+                case "--crlf":
+                    options.LineEnding = "\r\n";
                     break;
                 case "--help":
                 case "-h":
@@ -412,7 +452,10 @@ public Action Command_Test(int client, int args)
 
     private static void ShowHelp()
     {
-        Console.WriteLine("""
+        Console.WriteLine(HelpText);
+    }
+
+    public static string HelpText => """
 SourcePawn Formatter - CLI Tool
 
 Usage:
@@ -422,7 +465,7 @@ Arguments:
   files                SourcePawn files (.sp, .inc) to format
   directories          Directories to process (use --dir to enable)
 
-Options:
+I/O options:
   -o, --output         Write formatted code to [filename]_formatted.sp
       --stdin          Read source from stdin; write formatted source to stdout
   -q, --quiet          Suppress verbose output
@@ -430,14 +473,35 @@ Options:
   -b, --backup         Create .bak files and write formatted code in place
       --check          Exit non-zero if any file would change
       --dir            Enable directory processing (recursive)
-      --indent <n>     Indent size when using spaces
+
+Formatting options (match FormattingOptions / playground / desktop):
+      --indent <n>     Indent size when using spaces (default 4)
       --use-tabs       Indent with tabs
+      --no-space-after-comma
+                       Disable space after commas
+      --no-space-around-operators
+                       Disable spaces around operators
       --space-before-paren
                        Space before '(' on calls and function names
                        (control headers always use a space)
-      --no-space-around-operators
-                       Disable spaces around operators
+      --space-in-array-brackets
+                       Spaces inside array brackets: [ 0 ]
+      --no-newline-after-open-brace
+                       Keep '{' on the same line as the header
+      --no-newline-after-include
+                       No blank line after a run of #include
+      --no-preserve-empty-lines
+                       Strip blank lines from output
+      --max-consecutive-empty-lines <n>
+                       Cap preserved blank lines (default 2)
+      --sort-includes  Sort #include lines
+      --no-require-semicolons
+                       Do not insert missing statement semicolons
+      --allow-syntax-recovery
+                       Opt-in ERROR-tree / expression-wrapper recovery
       --unsafe-macros  Format files that contain function-like #define macros
+      --lf             Use LF line endings
+      --crlf           Use CRLF line endings
   -h, --help           Show this help message
 
 Examples:
@@ -447,6 +511,5 @@ Examples:
   SpFormatter.Cli src/ --dir --check
   SpFormatter.Cli plugin.sp --indent 2 --quiet
   SpFormatter.Cli --stdin --indent 4 < plugin.sp
-""");
-    }
+""";
 }

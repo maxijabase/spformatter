@@ -22,7 +22,7 @@ dotnet run --project src/SpFormatter.Cli -- plugin.sp --backup
 dotnet run --project src/SpFormatter.Cli -- plugin.sp --indent 2 --quiet
 ```
 
-Useful flags: `--output`, `--stdin` (editor-friendly), `--backup` (in-place with `.bak`), `--check`, `--dir`, `--indent`, `--use-tabs`, `--space-before-paren`, `--no-space-around-operators`, `--unsafe-macros`.
+Useful flags: `--output`, `--stdin` (editor-friendly), `--backup` (in-place with `.bak`), `--check`, `--dir`, and the full formatting surface (`--indent`, `--use-tabs`, `--space-before-paren`, `--sort-includes`, `--unsafe-macros`, `--lf` / `--crlf`, …). Run `--help` for every honored option. Engine, CLI, playground, and desktop UI stay in lockstep via `FormattingOptionsCatalog`.
 
 ## Macros
 
