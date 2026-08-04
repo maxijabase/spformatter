@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SpFormatter\SpFormatter.csproj" />
-    <ProjectReference Include="..\..\src\SpFormatter.Cli\SpFormatter.Cli.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\SpFormatter\SpFormatter.csproj" />
+    <ProjectReference Include="..\SpFormatter.Cli\SpFormatter.Cli.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
