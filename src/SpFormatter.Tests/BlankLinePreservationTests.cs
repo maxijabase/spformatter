@@ -346,7 +346,7 @@ public class BlankLinePreservationTests : FormatterTestBase
     [Fact]
     public void SortIncludes_true_preserves_blanks_inside_include_run_by_source_neighbors()
     {
-        // After sort, gaps follow reordered neighbors' original spans (may collapse mid-run blanks).
+        // After sort, mid-run source gaps are not meaningful; includes stay contiguous.
         const string input = "#include <z>\n\n#include <a>\n";
         using var f = new SourcePawnFormatter(new FormattingOptions
         {
@@ -354,9 +354,23 @@ public class BlankLinePreservationTests : FormatterTestBase
             SortIncludes = true
         });
         var result = f.Format(input);
-        result.Should().StartWith("#include <a>");
-        result.Should().Contain("#include <z>");
+        result.Should().Be("#include <a>\n#include <z>");
         f.Format(result).Should().Be(result);
+    }
+
+    [Fact]
+    public void SortIncludes_true_does_not_invent_mid_run_or_double_trailing_blanks()
+    {
+        const string input = "#include a\n#include x\n#include c\n\npublic void OnPluginStart()\n{\n}\n";
+        using var f = new SourcePawnFormatter(new FormattingOptions
+        {
+            LineEnding = "\n",
+            SortIncludes = true,
+            NewLineAfterInclude = true
+        });
+        var once = f.Format(input);
+        once.Should().Be("#include a\n#include c\n#include x\n\npublic void OnPluginStart()\n{\n}");
+        f.Format(once).Should().Be(once);
     }
 
     [Fact]

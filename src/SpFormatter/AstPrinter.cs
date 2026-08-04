@@ -2766,12 +2766,43 @@ public sealed class AstPrinter
             var blanks = 0;
             if (_layout.Options.PreserveEmptyLines && !string.IsNullOrEmpty(_source))
             {
-                var prevEnd = siblings[i].EndIndex;
+                var prev = siblings[i];
                 var next = siblings[i + 1].Node;
-                if (prevEnd < next.StartIndex && next.StartIndex <= _source.Length)
+                var prevIsInclude = prev.Node.Type == "preproc_include";
+                var nextIsInclude = next.Type == "preproc_include";
+
+                if (_layout.Options.SortIncludes && prevIsInclude && nextIsInclude)
                 {
-                    blanks = LayoutRules.CountBlankLinesInGap(
-                        _source.AsSpan(prevEnd, next.StartIndex - prevEnd));
+                    // Reordered includes are not source neighbors; do not invent
+                    // mid-run blanks from spans that still contain other includes.
+                    blanks = 0;
+                }
+                else if (_layout.Options.SortIncludes && prevIsInclude && !nextIsInclude)
+                {
+                    // Trailing gap after the whole include run, not after whichever
+                    // include sorted last (that span can still contain other includes).
+                    var runStart = i;
+                    while (runStart > 0 && siblings[runStart - 1].Node.Type == "preproc_include")
+                        runStart--;
+
+                    var runEnd = prev.EndIndex;
+                    for (var r = runStart; r <= i; r++)
+                        runEnd = Math.Max(runEnd, siblings[r].EndIndex);
+
+                    if (runEnd < next.StartIndex && next.StartIndex <= _source.Length)
+                    {
+                        blanks = LayoutRules.CountBlankLinesInGap(
+                            _source.AsSpan(runEnd, next.StartIndex - runEnd));
+                    }
+                }
+                else
+                {
+                    var prevEnd = prev.EndIndex;
+                    if (prevEnd < next.StartIndex && next.StartIndex <= _source.Length)
+                    {
+                        blanks = LayoutRules.CountBlankLinesInGap(
+                            _source.AsSpan(prevEnd, next.StartIndex - prevEnd));
+                    }
                 }
             }
 
