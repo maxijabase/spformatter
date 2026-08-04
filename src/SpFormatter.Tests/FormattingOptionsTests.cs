@@ -318,7 +318,6 @@ public class FormattingOptionsTests : FormatterTestBase
         defaultOptions.SpaceAroundOperators.Should().BeTrue();
         defaultOptions.SpaceBeforeOpenParen.Should().BeFalse();
         defaultOptions.NewLineAfterOpenBrace.Should().BeTrue();
-        defaultOptions.MaxLineLength.Should().Be(120);
         defaultOptions.PreserveEmptyLines.Should().BeTrue();
         defaultOptions.MaxConsecutiveEmptyLines.Should().Be(2);
         defaultOptions.SortIncludes.Should().BeFalse();

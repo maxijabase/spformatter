@@ -25,8 +25,6 @@ public class FormattingOptions
     public bool NewLineAfterOpenBrace { get; set; } = true;
     public bool NewLineAfterInclude { get; set; } = true;
 
-    public int MaxLineLength { get; set; } = 120;
-
     public bool PreserveEmptyLines { get; set; } = true;
     public int MaxConsecutiveEmptyLines { get; set; } = 2;
 
