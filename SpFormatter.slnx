@@ -10,5 +10,6 @@
     <Project Path="src/SpFormatter.UI/SpFormatter.UI.csproj" />
     <Project Path="src/SpFormatter/SpFormatter.csproj" />
     <Project Path="src/SpFormatter.Tests/SpFormatter.Tests.csproj" />
+    <Project Path="src/SpModernizer/SpModernizer.csproj" />
   </Folder>
 </Solution>

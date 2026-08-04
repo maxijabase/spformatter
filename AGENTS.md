@@ -2,6 +2,8 @@
 
 SourcePawn formatter for .NET. Parse with Tree-sitter, print with a pretty-printer.
 
+Sibling product **SpModernizer** rewrites legacy/tag syntax to Transitional Syntax. It is not part of Format. See [docs/MODERNIZER.md](docs/MODERNIZER.md) and [docs/MODERNIZER_ROADMAP.md](docs/MODERNIZER_ROADMAP.md).
+
 ## Read first
 
 1. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
@@ -12,9 +14,11 @@ SourcePawn formatter for .NET. Parse with Tree-sitter, print with a pretty-print
 
 ## Current phase
 
-Printer migration in [docs/ROADMAP.md](docs/ROADMAP.md) is complete. Typed constructs print through `AstPrinter` + `LayoutRules`. `SourcePawnFormatter` is a thin facade. ERROR recovery lives under `Recovery/` and is opt-in via `AllowSyntaxRecovery`.
+Printer migration in [docs/ROADMAP.md](ROADMAP.md) is complete. Typed constructs print through `AstPrinter` + `LayoutRules`. `SourcePawnFormatter` is a thin facade. ERROR recovery lives under `Recovery/` and is opt-in via `AllowSyntaxRecovery`.
 
 Deferred product asks (alignment, optional semicolons, grammar work) stay out of scope unless explicitly requested.
+
+SpModernizer work follows MODERNIZER docs. Do not add modernize behavior to `FormattingOptions` or `SourcePawnFormatter`.
 
 ## Hard stops
 
