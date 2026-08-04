@@ -12,5 +12,6 @@
     <Project Path="src/SpFormatter.Tests/SpFormatter.Tests.csproj" />
     <Project Path="src/SpModernizer/SpModernizer.csproj" />
     <Project Path="src/SpModernizer.Cli/SpModernizer.Cli.csproj" />
+    <Project Path="src/SpModernizer.Tests/SpModernizer.Tests.csproj" />
   </Folder>
 </Solution>
