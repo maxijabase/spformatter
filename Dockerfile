@@ -7,6 +7,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY SpFormatter.slnx ./
 COPY src/SpFormatter ./src/SpFormatter
+COPY src/SpModernizer ./src/SpModernizer
 COPY src/SpFormatter.Playground ./src/SpFormatter.Playground
 RUN dotnet restore src/SpFormatter.Playground/SpFormatter.Playground.csproj
 RUN dotnet publish src/SpFormatter.Playground/SpFormatter.Playground.csproj \
