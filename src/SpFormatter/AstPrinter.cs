@@ -91,6 +91,13 @@ public sealed class AstPrinter
             case "old_for_loop_variable_declaration_statement":
                 result = FormatVariableDeclaration(node, indentLevel);
                 return true;
+            case "dynamic_array_declaration":
+                // Nested name = new T[n] under variable_declaration_statement.
+                result = FormatVariableDeclarationInner(node, indentLevel);
+                return true;
+            case "dynamic_array":
+                result = FormatDynamicArray(node);
+                return true;
             case "old_type_cast":
                 result = FormatOldTypeCast(node);
                 return true;
@@ -2339,6 +2346,20 @@ public sealed class AstPrinter
         foreach (var child in node.Children)
         {
             var formatted = _formatChild(child, 0);
+            if (!string.IsNullOrEmpty(formatted))
+                parts.Add(formatted);
+        }
+
+        return _layout.JoinDeclarationParts(parts);
+    }
+
+    private string FormatDynamicArray(Node node)
+    {
+        // new int[MaxClients + 1]
+        var parts = new List<string>();
+        foreach (var child in node.Children)
+        {
+            var formatted = FormatDeclarationChild(child);
             if (!string.IsNullOrEmpty(formatted))
                 parts.Add(formatted);
         }

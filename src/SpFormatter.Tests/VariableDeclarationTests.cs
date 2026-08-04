@@ -38,6 +38,7 @@ public class VariableDeclarationTests : FormatterTestBase
     [InlineData("Variables/ArrayDeclarations/simple_array")]
     [InlineData("Variables/ArrayDeclarations/matrix_array")]
     [InlineData("Variables/ArrayDeclarations/complex_array")]
+    [InlineData("Variables/ArrayDeclarations/dynamic_new_array")]
     [InlineData("Variables/ArrayLiterals/array_literal_line_comments")]
     [InlineData("Variables/ArrayLiterals/array_literal_row_comments")]
     [InlineData("Variables/ArrayLiterals/array_literal_comment_before_brace")]

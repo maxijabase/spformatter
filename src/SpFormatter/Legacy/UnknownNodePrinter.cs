@@ -48,9 +48,14 @@ public sealed class UnknownNodePrinter
                 {
                     result.Append(current);
                 }
-                else if (current is "[" or "]" || previous is "[" or "]" ||
-                         current.StartsWith('[') || current.EndsWith(']'))
+                else if (current is "[" or "]" || previous is "[" or "]")
                 {
+                    result.Append(current);
+                }
+                else if ((current.StartsWith('[') || current.EndsWith(']'))
+                         && !_layout.IsAssignmentOperator(previous))
+                {
+                    // Glue `name[i]` / `int[]`, but keep `= new int[n]` spaced.
                     result.Append(current);
                 }
                 else if (current == "(" || current.StartsWith('(') || previous == ")")
