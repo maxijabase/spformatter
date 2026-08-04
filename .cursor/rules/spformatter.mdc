@@ -23,5 +23,6 @@ Before changing behavior, read:
 - No new regex or string post-processors on clean trees.
 - No new `HasError` special-cases without updating `docs/SUPPORTED.md`.
 - Do not invent options the engine does not honor.
+- Every honored option is a vertical slice: engine + CLI + playground + desktop, listed in `FormattingOptionsCatalog`.
 - Do not mass-update goldens to hide failures.
 - Commit logical chunks with lowercase subjects and short human bodies. No em-dashes, no filler language.

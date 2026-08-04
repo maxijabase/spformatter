@@ -27,6 +27,7 @@ SpModernizer work follows MODERNIZER docs. Do not add modernize behavior to `For
 - Do not add regex / string post-processors outside a named Recovery module.
 - Do not add `HasError` special-cases without classifying the case and updating `docs/SUPPORTED.md`.
 - Do not invent new `FormattingOptions` until the option is implemented and has true/false tests that actually differ.
+- Every honored option is one vertical slice: engine + CLI flag + playground control + desktop UI, listed in `FormattingOptionsCatalog`. Do not ship an option on only one surface.
 - Do not mass-update golden files just to silence failures.
 - Do not brace-inject or reorder top-level declarations as silent defaults in new code.
 
