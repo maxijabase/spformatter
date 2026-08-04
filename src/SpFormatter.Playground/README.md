@@ -1,6 +1,8 @@
 # SpFormatter Playground
 
-ASP.NET host for the online formatter: Monaco UI + `/api/format`.
+ASP.NET host for the online toolkit: Monaco UI + `/api/format` + `/api/modernize`.
+
+Mode toggle: **Format** (layout only) vs **Modernize** (legacy → transitional syntax). Each mode loads its own sample script. `?mode=modernize` deep-links into Modernize.
 
 ## Local
 

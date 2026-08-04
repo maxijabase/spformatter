@@ -1,4 +1,4 @@
-const SAMPLE = `#include <sourcemod>
+const FORMAT_SAMPLE = `#include <sourcemod>
 
 public Plugin myinfo =
 {
@@ -16,6 +16,80 @@ public void OnPluginStart()
     {
         PrintToServer("hello");
     }
+}
+`;
+
+// Exhaustive legacy sample: hits every default SpModernizer rule family.
+const MODERNIZE_SAMPLE = `new Float:g_x = 5.0;
+new g_y = 7;
+new String:g_name[32];
+new bool:g_ready;
+decl String:g_scratch[64];
+new Handle:g_timer;
+static Float:g_static = 1.0;
+
+stock bool:IsUserACrab(client)
+{
+    return false;
+}
+
+public OnReceivedString(const String:name[], Float:fval)
+{
+    new Float:scaled = Float:fval;
+    new _:plain = 0;
+    PrintToServer("%s %f", name, scaled);
+}
+
+forward Action:OnSomething(Handle:timer, any:data);
+
+native Float:NativeAdd(Float:a, Float:b);
+
+functag public Action:SrvCmd(args);
+functag public ConCmd(client, args);
+
+funcenum Timer {
+    Action:public(Handle:timer, Handle:hndl),
+    Action:public(Handle:timer),
+};
+
+struct PluginInfo {
+    const String:name[],
+    const String:author[],
+    const String:description[],
+    const String:version[],
+    const String:url[]
+};
+
+public OnPluginStart()
+{
+    new Float:local = Float:0;
+    new String:buf[32];
+    new i = 0;
+    new Handle:arr;
+
+    for (new j = 0; j < 3; j++)
+    {
+        local = Float:j;
+    }
+
+    while !g_ready do
+    {
+        g_ready = true;
+    }
+
+    do
+    {
+        i++;
+    }
+    while !g_ready;
+}
+
+public void AlreadyModern(int client, const char[] msg)
+{
+    float ok = 1.0;
+    ArrayList list = new ArrayList();
+    int[] players = new int[MaxClients + 1];
+    delete list;
 }
 `;
 
@@ -126,17 +200,29 @@ async function formatNow() {
   if (formatting || !inputEditor) return;
   formatting = true;
   $("formatBtn").disabled = true;
-  setStatus("Formatting…");
+
+  const mode = $("modeSelect").value;
+  const isModernize = mode === "modernize";
+  setStatus(isModernize ? "Modernizing…" : "Formatting…");
 
   const started = performance.now();
   try {
-    const response = await fetch("/api/format", {
+    const endpoint = isModernize ? "/api/modernize" : "/api/format";
+    const body = isModernize
+      ? {
+          source: inputEditor.getValue(),
+          formatAfter: $("formatAfter").checked,
+          options: readOptions()
+        }
+      : {
+          source: inputEditor.getValue(),
+          options: readOptions()
+        };
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        source: inputEditor.getValue(),
-        options: readOptions()
-      })
+      body: JSON.stringify(body)
     });
 
     const elapsed = Math.round(performance.now() - started);
@@ -152,9 +238,12 @@ async function formatNow() {
     if (result.success) {
       outputEditor.setValue(result.text || "");
       showErrors([]);
-      setStatus(`OK · ${elapsed} ms`);
+      const extra = isModernize && result.changes
+        ? ` · ${result.changes.length} change(s)`
+        : "";
+      setStatus(`OK · ${elapsed} ms${extra}`);
     } else {
-      showErrors(result.errors || [{ message: "Format failed" }]);
+      showErrors(result.errors || [{ message: isModernize ? "Modernize failed" : "Format failed" }]);
       setStatus(`Errors · ${elapsed} ms`);
     }
   } catch (err) {
@@ -163,6 +252,30 @@ async function formatNow() {
   } finally {
     formatting = false;
     $("formatBtn").disabled = false;
+  }
+}
+
+function sampleForMode(mode) {
+  return mode === "modernize" ? MODERNIZE_SAMPLE : FORMAT_SAMPLE;
+}
+
+function isStockSample(text) {
+  const normalized = String(text || "").replace(/\r\n/g, "\n");
+  return (
+    normalized === FORMAT_SAMPLE.replace(/\r\n/g, "\n") ||
+    normalized === MODERNIZE_SAMPLE.replace(/\r\n/g, "\n") ||
+    normalized.trim() === ""
+  );
+}
+
+function syncModeUi(options = {}) {
+  const modernize = $("modeSelect").value === "modernize";
+  $("formatAfterWrap").hidden = !modernize;
+  const titles = document.querySelectorAll(".pane-title");
+  if (titles[1]) titles[1].textContent = modernize ? "Modernized" : "Formatted";
+
+  if (options.loadSample && inputEditor && isStockSample(inputEditor.getValue())) {
+    inputEditor.setValue(sampleForMode(modernize ? "modernize" : "format"));
   }
 }
 
@@ -190,6 +303,9 @@ async function loadVersion() {
 require(["vs/editor/editor.main"], () => {
   loadVersion();
 
+  const params = new URLSearchParams(window.location.search);
+  const initialMode = params.get("mode") === "modernize" ? "modernize" : "format";
+
   const shared = {
     language: "c",
     theme: "vs-dark",
@@ -202,7 +318,7 @@ require(["vs/editor/editor.main"], () => {
 
   inputEditor = monaco.editor.create($("inputEditor"), {
     ...shared,
-    value: SAMPLE
+    value: sampleForMode(initialMode)
   });
 
   outputEditor = monaco.editor.create($("outputEditor"), {
@@ -212,11 +328,21 @@ require(["vs/editor/editor.main"], () => {
   });
 
   applyOptions(DEFAULT_OPTIONS);
+  $("modeSelect").value = initialMode;
+  syncModeUi();
 
   $("formatBtn").addEventListener("click", formatNow);
+  $("modeSelect").addEventListener("change", () => {
+    syncModeUi({ loadSample: true });
+    formatNow();
+  });
+  $("formatAfter").addEventListener("change", scheduleLiveFormat);
   $("resetOptions").addEventListener("click", () => {
     applyOptions(DEFAULT_OPTIONS);
-    scheduleLiveFormat();
+    if (inputEditor) {
+      inputEditor.setValue(sampleForMode($("modeSelect").value));
+    }
+    formatNow();
   });
 
   inputEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, formatNow);

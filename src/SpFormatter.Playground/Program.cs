@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using SpFormatter;
 using SpFormatter.Playground.Models;
+using SpModernizer;
 
 const int MaxSourceBytes = 256 * 1024;
 
@@ -91,6 +92,40 @@ app.MapPost("/api/format", (FormatRequest? request) =>
     using var formatter = new SourcePawnFormatter(options);
     var result = formatter.FormatWithResult(request.Source);
     return Results.Json(FormatResponse.FromResult(result));
+}).RequireRateLimiting("format");
+
+app.MapPost("/api/modernize", (ModernizeRequest? request) =>
+{
+    if (request?.Source is null)
+        return Results.BadRequest(new { error = "Request body must include a source string." });
+
+    var byteCount = System.Text.Encoding.UTF8.GetByteCount(request.Source);
+    if (byteCount > MaxSourceBytes)
+    {
+        return Results.Json(
+            new { error = $"Source exceeds maximum size of {MaxSourceBytes} bytes." },
+            statusCode: StatusCodes.Status413PayloadTooLarge);
+    }
+
+    var formatting = request.Options?.ToFormattingOptions() ?? new FormattingOptions
+    {
+        AllowSyntaxRecovery = false,
+        AllowUnsafeMacros = false,
+        LineEnding = "\n"
+    };
+
+    var options = new ModernizeOptions
+    {
+        FormatAfter = request.FormatAfter,
+        FormattingOptions = formatting,
+        AllowUnsafeMacros = request.AllowUnsafeMacros || (request.Options?.AllowUnsafeMacros ?? false),
+        EnabledRules = request.EnabledRules ?? Array.Empty<string>(),
+        ExcludedRules = request.ExcludedRules ?? Array.Empty<string>(),
+    };
+
+    using var modernizer = new SourcePawnModernizer(options);
+    var result = modernizer.ModernizeWithResult(request.Source);
+    return Results.Json(ModernizeResponse.FromResult(result));
 }).RequireRateLimiting("format");
 
 app.MapFallbackToFile("index.html");

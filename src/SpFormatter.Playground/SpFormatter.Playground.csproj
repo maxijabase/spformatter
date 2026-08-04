@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SpFormatter\SpFormatter.csproj" />
+    <ProjectReference Include="..\SpModernizer\SpModernizer.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

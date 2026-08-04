@@ -13,12 +13,22 @@
       <span id="version" class="version"></span>
     </div>
     <div class="actions">
+      <label class="mode">
+        Mode
+        <select id="modeSelect">
+          <option value="format" selected>Format</option>
+          <option value="modernize">Modernize</option>
+        </select>
+      </label>
+      <label class="check" id="formatAfterWrap" hidden>
+        <input type="checkbox" id="formatAfter" checked /> Format after
+      </label>
       <label class="live">
         <input type="checkbox" id="liveToggle" />
         Live
       </label>
       <button type="button" id="resetOptions" class="secondary">Reset options</button>
-      <button type="button" id="formatBtn">Format</button>
+      <button type="button" id="formatBtn">Run</button>
       <span id="status" class="status">Ready</span>
     </div>
   </header>
