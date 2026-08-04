@@ -45,7 +45,16 @@ public sealed class FormatOptionsDto
             RequireSemicolons = RequireSemicolons ?? defaults.RequireSemicolons,
             AllowSyntaxRecovery = AllowSyntaxRecovery ?? false,
             AllowUnsafeMacros = AllowUnsafeMacros ?? false,
-            LineEnding = string.IsNullOrEmpty(LineEnding) ? "\n" : LineEnding
+            LineEnding = NormalizeLineEnding(LineEnding)
         };
     }
+
+    private static string NormalizeLineEnding(string? value) =>
+        value switch
+        {
+            "\r\n" or "crlf" or "CRLF" => "\r\n",
+            "\n" or "lf" or "LF" => "\n",
+            null or "" => "\n",
+            _ => value
+        };
 }

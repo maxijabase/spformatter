@@ -169,7 +169,6 @@ public partial class MainWindow : Window
             SpaceInArrayBrackets = SpaceInArrayBracketsCheckBox.IsChecked == true,
             NewLineAfterOpenBrace = NewLineAfterOpenBraceCheckBox.IsChecked == true,
             NewLineAfterInclude = NewLineAfterIncludeCheckBox.IsChecked == true,
-            MaxLineLength = int.TryParse(MaxLineLengthTextBox.Text, out var length) ? length : 120,
             PreserveEmptyLines = PreserveEmptyLinesCheckBox.IsChecked == true,
             MaxConsecutiveEmptyLines = int.TryParse(MaxConsecutiveEmptyLinesTextBox.Text, out var maxEmptyLines)
                 ? maxEmptyLines
@@ -177,6 +176,7 @@ public partial class MainWindow : Window
             SortIncludes = SortIncludesCheckBox.IsChecked == true,
             RequireSemicolons = RequireSemicolonsCheckBox.IsChecked == true,
             AllowSyntaxRecovery = AllowSyntaxRecoveryCheckBox.IsChecked == true,
+            AllowUnsafeMacros = AllowUnsafeMacrosCheckBox.IsChecked == true,
             LineEnding = LineEndingComboBox.SelectedIndex == 1 ? "\r\n" : "\n"
         };
 

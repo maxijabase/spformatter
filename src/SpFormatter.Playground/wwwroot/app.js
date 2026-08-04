@@ -108,7 +108,7 @@ const DEFAULT_OPTIONS = {
   requireSemicolons: true,
   allowSyntaxRecovery: false,
   allowUnsafeMacros: false,
-  lineEnding: "\n"
+  lineEnding: "lf"
 };
 
 let inputEditor;
@@ -136,7 +136,7 @@ function readOptions() {
     requireSemicolons: $("requireSemicolons").checked,
     allowSyntaxRecovery: $("allowSyntaxRecovery").checked,
     allowUnsafeMacros: $("allowUnsafeMacros").checked,
-    lineEnding: "\n"
+    lineEnding: $("lineEnding").value === "crlf" ? "crlf" : "lf"
   };
 }
 
@@ -155,6 +155,7 @@ function applyOptions(options) {
   $("requireSemicolons").checked = options.requireSemicolons;
   $("allowSyntaxRecovery").checked = options.allowSyntaxRecovery;
   $("allowUnsafeMacros").checked = options.allowUnsafeMacros;
+  $("lineEnding").value = options.lineEnding === "crlf" ? "crlf" : "lf";
 }
 
 function setStatus(text) {

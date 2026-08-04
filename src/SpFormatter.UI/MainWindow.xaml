@@ -200,13 +200,9 @@
                             <CheckBox x:Name="NewLineAfterOpenBraceCheckBox" Style="{StaticResource OptionCheck}" Content="Newline after {" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                             <CheckBox x:Name="NewLineAfterIncludeCheckBox" Style="{StaticResource OptionCheck}" Content="Blank after include" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                             <CheckBox x:Name="PreserveEmptyLinesCheckBox" Style="{StaticResource OptionCheck}" Content="Preserve empty lines" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                            <DockPanel Margin="0,0,0,8">
+                            <DockPanel>
                                 <TextBlock Text="Max blanks" Foreground="#FFB8C4D1" VerticalAlignment="Center" Width="78"/>
                                 <TextBox x:Name="MaxConsecutiveEmptyLinesTextBox" Style="{StaticResource OptionField}" Text="2" Width="48" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
-                            </DockPanel>
-                            <DockPanel>
-                                <TextBlock Text="Max length" Foreground="#FFB8C4D1" VerticalAlignment="Center" Width="78"/>
-                                <TextBox x:Name="MaxLineLengthTextBox" Style="{StaticResource OptionField}" Text="120" Width="56" HorizontalAlignment="Left" TextChanged="OptionsChanged"/>
                             </DockPanel>
                         </StackPanel>
 
@@ -217,6 +213,9 @@
                             <CheckBox x:Name="AllowSyntaxRecoveryCheckBox" Style="{StaticResource OptionCheck}" Content="Allow syntax recovery" IsChecked="False"
                                       Checked="OptionsChanged" Unchecked="OptionsChanged"
                                       ToolTip="Opt-in ERROR-tree / expression-wrapper recovery. Default is fail closed."/>
+                            <CheckBox x:Name="AllowUnsafeMacrosCheckBox" Style="{StaticResource OptionCheck}" Content="Allow unsafe macros" IsChecked="False"
+                                      Checked="OptionsChanged" Unchecked="OptionsChanged"
+                                      ToolTip="Format files that contain function-like #define Name( macros. Default refuses them."/>
                             <TextBlock TextWrapping="Wrap" Foreground="#FF8FA0B2" FontSize="11" Margin="0,8,0,0"
                                        Text="AST and Errors modes inspect the tree-sitter parse without changing the printer path."/>
                         </StackPanel>
