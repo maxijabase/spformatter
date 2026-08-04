@@ -5,7 +5,7 @@ void OnMapStart()
 #endif
     new g_iTeamRedIndex;
 
-    switch(TFTeam:iTeamNum)
+    switch (TFTeam:iTeamNum)
     {
 #if defined INCLUDE_SPEC_TEAMS
         case TFTeam_Unassigned:

@@ -692,7 +692,7 @@ public sealed class AstPrinter
         var trailingElseComments = new List<string>();
 
         var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var space = _layout.ControlParenSpace;
         var lines = new List<string>();
 
         foreach (var child in node.Children)
@@ -813,7 +813,7 @@ public sealed class AstPrinter
         var slot = 0;
 
         var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var space = _layout.ControlParenSpace;
         var lines = new List<string>();
 
         foreach (var child in node.Children)
@@ -902,7 +902,7 @@ public sealed class AstPrinter
         var preprocLines = new List<string>();
 
         var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var space = _layout.ControlParenSpace;
 
         foreach (var child in node.Children)
         {
@@ -1033,7 +1033,7 @@ public sealed class AstPrinter
         }
 
         var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var space = _layout.ControlParenSpace;
         var lines = new List<string> { indent + "do" };
         AppendControlBody(lines, body, indentLevel);
 
@@ -1112,7 +1112,7 @@ public sealed class AstPrinter
         }
 
         var indent = _layout.Indent(indentLevel);
-        var space = _layout.Options.SpaceBeforeOpenParen ? " " : "";
+        var space = _layout.ControlParenSpace;
         var exprText = switchExpression != null ? _formatChild(switchExpression, 0) : "";
         var lines = new List<string>
         {

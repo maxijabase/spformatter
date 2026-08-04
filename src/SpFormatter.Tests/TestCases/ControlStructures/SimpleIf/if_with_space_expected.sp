@@ -1,6 +1,6 @@
 void TestControlStructure()
 {
-    if(condition)
+    if (condition)
     {
     }
 }

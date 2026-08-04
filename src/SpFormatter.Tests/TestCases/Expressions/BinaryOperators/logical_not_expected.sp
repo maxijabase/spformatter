@@ -1,6 +1,6 @@
 void test()
 {
-    if(!flag)
+    if (!flag)
     {
     }
 }

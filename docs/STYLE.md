@@ -17,7 +17,8 @@ Product defaults for formatted SourcePawn. Goldens must follow this file, not ad
 
 - space after commas (default on)
 - spaces around binary operators (default on)
-- no space before `(` in calls / control headers (default)
+- space before `(` after control keywords (`if`, `for`, `while`, `switch`, and `do`/`while`)
+- no space before `(` in calls or function names (default; `SpaceBeforeOpenParen` opts into call/name spacing only)
 - no spaces inside array brackets (default)
 
 ## Semicolons

@@ -1,6 +1,6 @@
 void TestFunction(int type)
 {
-    switch(type)
+    switch (type)
     {
         case 1:
             entity = CreateEntityByName("weapon_pistol");

@@ -27,6 +27,12 @@ public sealed class LayoutRules
     public string FormatAssignmentOperator(string op) =>
         _options.SpaceAroundOperators ? $" {op} " : op;
 
+    /// <summary>
+    /// Space between a control keyword and <c>(</c>. Always on, matching common C-family style
+    /// (clang-format <c>ControlStatements</c>).
+    /// </summary>
+    public string ControlParenSpace => " ";
+
     public string CallWithParen(string callee, string argsInsideParens)
     {
         var space = _options.SpaceBeforeOpenParen ? " " : "";

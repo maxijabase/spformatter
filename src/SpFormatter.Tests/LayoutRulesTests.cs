@@ -60,6 +60,26 @@ public class LayoutRulesTests
     }
 
     [Fact]
+    public void ControlParenSpace_is_always_on()
+    {
+        var off = new LayoutRules(new FormattingOptions { SpaceBeforeOpenParen = false });
+        off.ControlParenSpace.Should().Be(" ");
+
+        var on = new LayoutRules(new FormattingOptions { SpaceBeforeOpenParen = true });
+        on.ControlParenSpace.Should().Be(" ");
+    }
+
+    [Fact]
+    public void CallWithParen_respects_space_before_open_paren()
+    {
+        var tight = new LayoutRules(new FormattingOptions { SpaceBeforeOpenParen = false });
+        tight.CallWithParen("PrintToChat", "client, msg").Should().Be("PrintToChat(client, msg)");
+
+        var spaced = new LayoutRules(new FormattingOptions { SpaceBeforeOpenParen = true });
+        spaced.CallWithParen("PrintToChat", "client, msg").Should().Be("PrintToChat (client, msg)");
+    }
+
+    [Fact]
     public void CountBlankLinesInGap_basic_cases()
     {
         LayoutRules.CountBlankLinesInGap("\n".AsSpan()).Should().Be(0);

@@ -38,8 +38,8 @@ public class IfElseFormattingTests : FormatterTestBase
             """;
         using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\n" });
         var result = f.Format(input);
-        result.Should().Contain("if(x == 5)\n        return true;");
-        result.Should().NotContain("if(x == 5)\n    {\n        return true;");
+        result.Should().Contain("if (x == 5)\n        return true;");
+        result.Should().NotContain("if (x == 5)\n    {\n        return true;");
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class IfElseFormattingTests : FormatterTestBase
     {
         const string input = "void t()\n{\n    if(true)\n    {\n        return;\n    }\n}";
         using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\n" });
-        f.Format(input).Should().Contain("if(true)");
+        f.Format(input).Should().Contain("if (true)");
     }
 
     [Fact]

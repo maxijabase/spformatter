@@ -4,5 +4,5 @@ public Action Cmd(int client)
     {
         BlockCommand(CVARName);
     } //While:
-    while(FindNextConCommand(CVAR, CVARName, sizeof(CVARName), IsCommand, Flags));
+    while (FindNextConCommand(CVAR, CVARName, sizeof(CVARName), IsCommand, Flags));
 }

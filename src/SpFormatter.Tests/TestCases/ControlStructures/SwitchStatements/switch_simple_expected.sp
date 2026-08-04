@@ -1,6 +1,6 @@
 void TestFunction()
 {
-    switch(value)
+    switch (value)
     {
         case 1:
         {

@@ -191,7 +191,7 @@
                             <TextBlock Text="SPACING" Style="{StaticResource PanelLabel}"/>
                             <CheckBox x:Name="SpaceAfterCommaCheckBox" Style="{StaticResource OptionCheck}" Content="Space after comma" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                             <CheckBox x:Name="SpaceAroundOperatorsCheckBox" Style="{StaticResource OptionCheck}" Content="Space around operators" IsChecked="True" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
-                            <CheckBox x:Name="SpaceBeforeOpenParenCheckBox" Style="{StaticResource OptionCheck}" Content="Space before (" IsChecked="False" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
+                            <CheckBox x:Name="SpaceBeforeOpenParenCheckBox" Style="{StaticResource OptionCheck}" Content="Space before ( in calls" IsChecked="False" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                             <CheckBox x:Name="SpaceInArrayBracketsCheckBox" Style="{StaticResource OptionCheck}" Content="Space in [ ]" IsChecked="False" Checked="OptionsChanged" Unchecked="OptionsChanged"/>
                         </StackPanel>
 

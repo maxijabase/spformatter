@@ -1,9 +1,9 @@
 void F(int client)
 {
 #if USE_COOKIES
-    if(!IsFakeClient(client) && AreClientCookiesCached(client))
+    if (!IsFakeClient(client) && AreClientCookiesCached(client))
 #else
-    if(!IsFakeClient(client))
+    if (!IsFakeClient(client))
 #endif
     {
         Foo();

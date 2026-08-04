@@ -12,7 +12,14 @@ public class FormattingOptions
 
     public bool SpaceAfterComma { get; set; } = true;
     public bool SpaceAroundOperators { get; set; } = true;
+
+    /// <summary>
+    /// Space before <c>(</c> on calls and function/method names only.
+    /// Control headers (<c>if</c>, <c>for</c>, <c>while</c>, <c>switch</c>, <c>do</c>/<c>while</c>)
+    /// always use a space before <c>(</c>.
+    /// </summary>
     public bool SpaceBeforeOpenParen { get; set; } = false;
+
     public bool SpaceInArrayBrackets { get; set; } = false;
 
     public bool NewLineAfterOpenBrace { get; set; } = true;

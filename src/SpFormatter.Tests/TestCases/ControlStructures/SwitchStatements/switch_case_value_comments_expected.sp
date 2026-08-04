@@ -1,6 +1,6 @@
 void OnEntityCreated(int entity)
 {
-    switch(c)
+    switch (c)
     {
         case 'm', // molotov_projectile
             'p', // pipe_bomb_projectile

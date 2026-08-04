@@ -1,10 +1,10 @@
 void TestControlStructure()
 {
-    if(a)
+    if (a)
     {
         A();
     }
-    else if(b)
+    else if (b)
     {
         B();
     }

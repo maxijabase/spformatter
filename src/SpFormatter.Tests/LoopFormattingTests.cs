@@ -25,7 +25,7 @@ public class LoopFormattingTests : FormatterTestBase
         const string input = "void t()\n{\n    while(true)\n    {\n        break;\n    }\n}";
         using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\n" });
         var result = f.Format(input);
-        result.Should().Contain("while(true)");
+        result.Should().Contain("while (true)");
         result.Should().Contain("        break;");
     }
 
@@ -34,7 +34,7 @@ public class LoopFormattingTests : FormatterTestBase
     {
         const string input = "void t()\n{\n    while(x)\n        break;\n}";
         using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\n" });
-        f.Format(input).Should().Contain("while(x)\n        break;");
+        f.Format(input).Should().Contain("while (x)\n        break;");
     }
 
     [Fact]
@@ -42,6 +42,6 @@ public class LoopFormattingTests : FormatterTestBase
     {
         const string input = "void t()\n{\n    for(;;)\n    {\n        break;\n    }\n}";
         using var f = new SourcePawnFormatter(new FormattingOptions { LineEnding = "\n" });
-        f.Format(input).Should().Contain("for(;;)");
+        f.Format(input).Should().Contain("for (;;)");
     }
 }

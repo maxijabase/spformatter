@@ -433,7 +433,8 @@ Options:
       --indent <n>     Indent size when using spaces
       --use-tabs       Indent with tabs
       --space-before-paren
-                       Insert a space before '('
+                       Space before '(' on calls and function names
+                       (control headers always use a space)
       --no-space-around-operators
                        Disable spaces around operators
       --unsafe-macros  Format files that contain function-like #define macros

@@ -512,7 +512,7 @@ public class BlankLinePreservationTests : FormatterTestBase
             }
             """;
         var once = _formatter.Format(input);
-        once.Should().Contain("int a = 1;\n\n    if(a)");
+        once.Should().Contain("int a = 1;\n\n    if (a)");
         once.Should().Contain("int b = 2;\n\n\n        int c = 3;");
         once.Should().Contain("}\n\n    int d = 4;");
         _formatter.Format(once).Should().Be(once);
