@@ -369,6 +369,33 @@ public void OnPluginStart(){PrintToServer(""Plugin started"");}";
     }
 
     [Fact]
+    public void TestCli_Help_ListsEveryCatalogFlag()
+    {
+        var help = RunCli("--help");
+        foreach (var token in FormattingOptionsCatalog.CliFlagTokens)
+            help.Should().Contain(token);
+    }
+
+    [Fact]
+    public void TestCli_Stdin_HonorsNoSpaceAfterComma()
+    {
+        var output = RunCli("--stdin --quiet --no-space-after-comma", "void t(int a, int b) {}\n");
+        output.Should().Contain("(int a,int b)");
+    }
+
+    [Fact]
+    public void TestCli_Stdin_HonorsSortIncludes()
+    {
+        var input = "#include <b>\n#include <a>\n";
+        var output = RunCli("--stdin --quiet --sort-includes", input);
+        var indexA = output.IndexOf("#include <a>", StringComparison.Ordinal);
+        var indexB = output.IndexOf("#include <b>", StringComparison.Ordinal);
+        indexA.Should().BeGreaterThanOrEqualTo(0);
+        indexB.Should().BeGreaterThanOrEqualTo(0);
+        indexA.Should().BeLessThan(indexB);
+    }
+
+    [Fact]
     public void TestCli_Stdin_RejectsFileArguments()
     {
         try
